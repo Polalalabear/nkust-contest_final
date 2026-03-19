@@ -104,3 +104,19 @@ enum SortOrder: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 }
+
+enum ChartStyle: String, CaseIterable, Identifiable {
+    case bar = "長條圖"
+    case line = "折線圖"
+    case pie = "圓餅圖"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .bar: "chart.bar.fill"
+        case .line: "chart.xyaxis.line"
+        case .pie: "chart.pie.fill"
+        }
+    }
+}

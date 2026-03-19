@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct DashboardView: View {
     @Environment(AppState.self) private var appState
@@ -6,7 +7,7 @@ struct DashboardView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("摘要", systemImage: "heart.fill", value: .summary) {
+            Tab("主控台", systemImage: "heart.fill", value: .summary) {
                 SummaryView()
             }
 
@@ -22,16 +23,21 @@ enum DashboardTab: Hashable {
     case map
 }
 
+// MARK: - Summary
+
 struct SummaryView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = DashboardViewModel()
     @State private var showProfile = false
+    @State private var stepsChartStyle: ChartStyle = .bar
+    @State private var distanceChartStyle: ChartStyle = .bar
+    @State private var standingChartStyle: ChartStyle = .bar
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    statusBar
+                    actionButtons
                     quickCallButton
 
                     NavigationLink {
@@ -40,11 +46,13 @@ struct SummaryView: View {
                             records: DailyHealthRecord.mockThreeMonths()
                         )
                     } label: {
-                        healthCard(
+                        healthCardWithChart(
                             icon: "figure.walk",
                             title: "行走步數",
                             value: "\(viewModel.todaySteps)",
-                            unit: "步"
+                            unit: "步",
+                            metric: .steps,
+                            chartStyle: $stepsChartStyle
                         )
                     }
                     .buttonStyle(.plain)
@@ -55,11 +63,13 @@ struct SummaryView: View {
                             records: DailyHealthRecord.mockThreeMonths()
                         )
                     } label: {
-                        healthCard(
+                        healthCardWithChart(
                             icon: "map",
                             title: "行走距離",
                             value: String(format: "%.1f", viewModel.todayDistance),
-                            unit: "公里"
+                            unit: "公里",
+                            metric: .distance,
+                            chartStyle: $distanceChartStyle
                         )
                     }
                     .buttonStyle(.plain)
@@ -70,11 +80,13 @@ struct SummaryView: View {
                             records: DailyHealthRecord.mockThreeMonths()
                         )
                     } label: {
-                        healthCard(
+                        healthCardWithChart(
                             icon: "figure.stand",
                             title: "站立分鐘數",
                             value: "\(viewModel.todayStanding)",
-                            unit: "分鐘"
+                            unit: "分鐘",
+                            metric: .standing,
+                            chartStyle: $standingChartStyle
                         )
                     }
                     .buttonStyle(.plain)
@@ -88,7 +100,7 @@ struct SummaryView: View {
                 }
                 .padding()
             }
-            .navigationTitle("摘要")
+            .navigationTitle("照護者主控台")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -107,50 +119,83 @@ struct SummaryView: View {
         }
     }
 
-    private var statusBar: some View {
-        HStack(spacing: 0) {
-            statusItem(
-                icon: "wifi",
-                label: "裝置連接",
-                value: appState.deviceConnected ? "已連接" : "未連接",
-                valueColor: appState.deviceConnected ? .green : .red
-            )
-            Divider().frame(height: 50)
-            statusItem(
-                icon: "battery.50percent",
-                label: "裝置電量",
-                value: "\(appState.deviceBattery) %",
-                valueColor: .primary
-            )
-            Divider().frame(height: 50)
-            statusItem(
-                icon: "battery.50percent",
-                label: "手機電量",
-                value: "\(appState.phoneBattery) %",
-                valueColor: .orange
-            )
+    // MARK: - Action Buttons
+
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+            Button {
+                viewModel.fetchVisUserLocation()
+            } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("一鍵取得即時位置")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        if appState.isLocationSharing {
+                            Text("位置分享已開啟")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("位置分享未開啟")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "location.fill")
+                        .font(.title2)
+                        .foregroundStyle(.blue)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.blue.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(.blue.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(!appState.isLocationSharing)
+            .opacity(appState.isLocationSharing ? 1 : 0.6)
+            .accessibilityLabel("一鍵取得視障者即時位置")
+
+            Button {
+                viewModel.showNearestHospital()
+            } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("最近醫院")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        Text("顯示距離視障者最近的醫院")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "cross.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.red)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.red.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(.red.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("顯示距離視障者最近醫院")
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.regularMaterial)
-        )
     }
 
-    private func statusItem(icon: String, label: String, value: String, valueColor: Color) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.title3)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundStyle(valueColor)
-        }
-        .frame(maxWidth: .infinity)
-    }
+    // MARK: - Quick Call
 
     private var quickCallButton: some View {
         Button {
@@ -170,7 +215,16 @@ struct SummaryView: View {
         .accessibilityLabel("快速通話")
     }
 
-    private func healthCard(icon: String, title: String, value: String, unit: String) -> some View {
+    // MARK: - Health Card + Chart
+
+    private func healthCardWithChart(
+        icon: String,
+        title: String,
+        value: String,
+        unit: String,
+        metric: HealthMetric,
+        chartStyle: Binding<ChartStyle>
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: icon)
@@ -191,10 +245,13 @@ struct SummaryView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Image(systemName: "chart.bar.fill")
-                    .font(.title)
-                    .foregroundStyle(.orange.opacity(0.5))
             }
+
+            HealthChartView(
+                records: viewModel.weekRecords,
+                metric: metric,
+                chartStyle: chartStyle
+            )
         }
         .padding()
         .background(
@@ -202,6 +259,8 @@ struct SummaryView: View {
                 .fill(.regularMaterial)
         )
     }
+
+    // MARK: - All Health Link
 
     private var allHealthDataLink: some View {
         HStack {
@@ -222,11 +281,15 @@ struct SummaryView: View {
     }
 }
 
+// MARK: - Profile Sheet
+
 struct ProfileSheetView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @State private var isEditing = false
 
     var body: some View {
+        @Bindable var state = appState
         NavigationStack {
             List {
                 Section {
@@ -235,15 +298,52 @@ struct ProfileSheetView: View {
                             .font(.system(size: 56))
                             .foregroundStyle(.gray)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("照護者")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                            if isEditing {
+                                TextField("姓名", text: $state.caregiverName)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                            } else {
+                                Text(appState.caregiverName)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                            }
                             Text("caregiver@example.com")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                     }
                     .padding(.vertical, 8)
+                }
+
+                Section("個人資料") {
+                    if isEditing {
+                        HStack {
+                            Text("姓名")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            TextField("姓名", text: $state.caregiverName)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        HStack {
+                            Text("關係")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            TextField("關係", text: $state.caregiverRelationship)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        HStack {
+                            Text("緊急聯絡電話")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            TextField("電話", text: $state.caregiverEmergencyPhone)
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.phonePad)
+                        }
+                    } else {
+                        LabeledContent("姓名", value: appState.caregiverName)
+                        LabeledContent("關係", value: appState.caregiverRelationship)
+                        LabeledContent("緊急聯絡電話", value: appState.caregiverEmergencyPhone)
+                    }
                 }
 
                 Section("裝置資訊") {
@@ -254,8 +354,8 @@ struct ProfileSheetView: View {
                 }
 
                 Section("關於") {
-                    LabeledContent("版本", value: "1.0.0")
-                    LabeledContent("建置", value: "2026.03.19")
+                    LabeledContent("版本", value: AppState.appVersion)
+                    LabeledContent("建置", value: AppState.buildDate)
                 }
 
                 Section {
@@ -277,8 +377,13 @@ struct ProfileSheetView: View {
             .navigationTitle("個人資訊")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(isEditing ? "完成" : "編輯") {
+                        withAnimation { isEditing.toggle() }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button("關閉") { dismiss() }
                 }
             }
         }

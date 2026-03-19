@@ -76,9 +76,10 @@ nkust-contest/nkust-contest/
 │   ├── Models/
 │   │   ├── AppMode.swift       # UserRole + AppMode 列舉
 │   │   ├── DecisionModels.swift # 障礙物/方向/號誌/聯絡人模型
-│   │   └── HealthModels.swift  # 健康紀錄 + 指標 + 期間 + 排序
+│   │   └── HealthModels.swift  # 健康紀錄 + 指標 + 期間 + 排序 + ChartStyle
 │   └── Components/
 │       ├── CameraPreviewPlaceholder.swift
+│       ├── HealthChartView.swift   # 可切換長條圖/折線圖/圓餅圖（Swift Charts）
 │       ├── ModeHeaderBar.swift
 │       ├── OverlayCard.swift
 │       ├── SwipeHintBar.swift
@@ -145,6 +146,11 @@ ChooseUserView
 - [x] 健康數據卡片（步數、距離、站立分鐘）含每日/週/月/三月資料
 - [x] 單項健康指標詳細頁面（HealthDetailView）— 平均值 + 期間篩選 + 排序 + 每日紀錄
 - [x] 月曆式全部健康資料頁面（AllHealthDataView）— 日曆 + 日期點擊詳細 + 期間平均 + 排序
+- [x] 健康圖表（HealthChartView）— 長條圖/折線圖/圓餅圖切換（Swift Charts）
+- [x] 一鍵取得視障者即時位置 + 顯示最近醫院按鈕
+- [x] 照護者個人資料可編輯（姓名、關係、緊急聯絡電話）
+- [x] Dashboard 移除裝置狀態列（僅保留於個人資訊）
+- [x] 版本號管理（v1.1.0）
 - [x] `#Preview` 加入所有 View 檔案
 - [x] README.md + .gitignore
 
@@ -237,6 +243,8 @@ xcodebuild -project nkust-contest.xcodeproj \
 | 2026-03-19 | 循環滑動用 sentinel page 方案 | SwiftUI TabView 不原生支援循環 |
 | 2026-03-19 | 導航用 closure (`onBack`) 而非 NavigationStack path | 視障者流程為線性，不需要複雜路由 |
 | 2026-03-19 | 健康資料用 mock 而非 HealthKit | 架構規範要求外部服務必須 Stub |
+| 2026-03-19 | 使用 Swift Charts 而非第三方圖表庫 | 原生 Apple 框架，符合 tech-stack.md |
+| 2026-03-19 | 照護者資料存於 AppState (in-memory) | TODO: 未來用 SwiftData 持久化 |
 
 ---
 

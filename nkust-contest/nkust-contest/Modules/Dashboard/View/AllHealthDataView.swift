@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct AllHealthDataView: View {
     @State private var records = DailyHealthRecord.mockThreeMonths()
@@ -6,6 +7,8 @@ struct AllHealthDataView: View {
     @State private var displayedMonth: Date = Date()
     @State private var selectedPeriod: HealthPeriod = .month
     @State private var sortOrder: SortOrder = .descending
+    @State private var chartStyle: ChartStyle = .bar
+    @State private var chartMetric: HealthMetric = .steps
 
     private let calendar = Calendar.current
 
@@ -24,6 +27,20 @@ struct AllHealthDataView: View {
         return sortOrder == .descending
             ? data.sorted { $0.date > $1.date }
             : data.sorted { $0.date < $1.date }
+    }
+
+    private var chartRecords: [DailyHealthRecord] {
+        let cutoff: Date
+        let today = calendar.startOfDay(for: Date())
+        switch selectedPeriod {
+        case .week:
+            cutoff = calendar.date(byAdding: .day, value: -7, to: today)!
+        case .month:
+            cutoff = calendar.date(byAdding: .month, value: -1, to: today)!
+        case .threeMonths:
+            cutoff = calendar.date(byAdding: .month, value: -3, to: today)!
+        }
+        return records.filter { $0.date >= cutoff }
     }
 
     private var averageSteps: Double {
@@ -48,6 +65,7 @@ struct AllHealthDataView: View {
 
     var body: some View {
         List {
+            chartSection
             calendarSection
             periodAndSortSection
             averagesSection
@@ -60,6 +78,26 @@ struct AllHealthDataView: View {
         }
         .navigationTitle("所有健康資料")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - Chart
+
+    private var chartSection: some View {
+        Section("圖表") {
+            Picker("指標", selection: $chartMetric) {
+                ForEach(HealthMetric.allCases) { m in
+                    Text(m.rawValue).tag(m)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            HealthChartView(
+                records: chartRecords,
+                metric: chartMetric,
+                chartStyle: $chartStyle
+            )
+            .padding(.vertical, 4)
+        }
     }
 
     // MARK: - Calendar

@@ -261,3 +261,42 @@ It is a **machine-readable development log**
 - Health data remains mock — TODO: integrate HealthKit
 - Calendar grid uses LazyVGrid with 7 columns, leading blanks for month alignment
 - handoff.md created for next conversation handoff
+
+---
+
+### [2026-03-19 17:15]
+
+**Feature**
+- Remove device status bar from Dashboard summary (kept in profile sheet only)
+- Add "一鍵取得即時位置" button (disabled when location sharing off)
+- Add "最近醫院" button (show nearest hospital to visually impaired user)
+- Editable caregiver profile (name, relationship, emergency contact phone) with edit/done toggle
+- Add interactive charts (bar/line/pie via Swift Charts) above health data in Dashboard cards, HealthDetailView, and AllHealthDataView
+- AllHealthDataView now has metric picker (steps/distance/standing) for chart
+- Version bumped to 1.1.0, stored as static on AppState
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/State/AppState.swift (added caregiverName, caregiverRelationship, caregiverEmergencyPhone, visUserLatitude/Longitude, appVersion/buildDate)
+- /nkust-contest/nkust-contest/Shared/Models/HealthModels.swift (added ChartStyle enum)
+- /nkust-contest/nkust-contest/Shared/Components/HealthChartView.swift (new — reusable bar/line/pie chart)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift (removed statusBar, added actionButtons, charts on healthCards, editable ProfileSheetView)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/HealthDetailView.swift (added chart section)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/AllHealthDataView.swift (added chart section with metric picker)
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift (added fetchVisUserLocation, showNearestHospital)
+
+**State Changes**
+- AppState: added caregiverName, caregiverRelationship, caregiverEmergencyPhone (String), visUserLatitude/visUserLongitude (Double), appVersion/buildDate (static)
+- Added ChartStyle enum (.bar, .line, .pie) to HealthModels
+- ProfileSheetView now has isEditing toggle; binds to AppState caregiver fields
+- SummaryView no longer shows device status bar
+- HealthChartView uses Swift Charts (BarMark, LineMark, AreaMark, SectorMark)
+
+**Test Coverage**
+- Full xcodebuild compile: generic/platform=iOS (unsandboxed)
+- Result: PASS
+
+**Notes**
+- Location fetch and hospital search are stubs — TODO: integrate CoreLocation + MapKit MKLocalSearch
+- Caregiver profile data is in-memory only — TODO: persist with SwiftData
+- Charts use Swift Charts framework (native Apple, allowed by tech-stack.md)
+- Version is now 1.1.0

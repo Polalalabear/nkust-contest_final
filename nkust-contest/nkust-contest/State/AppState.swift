@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import CoreLocation
 
 @Observable
 final class AppState {
@@ -12,4 +13,14 @@ final class AppState {
     var deviceBattery: Int = 72
     var phoneBattery: Int = 93
     var isLocationSharing: Bool = true
+
+    var caregiverName: String = "王小明"
+    var caregiverRelationship: String = "子女"
+    var caregiverEmergencyPhone: String = "0912-345-678"
+
+    var visUserLatitude: Double = 22.6273
+    var visUserLongitude: Double = 120.3014
+
+    static let appVersion = "1.1.0"
+    static let buildDate = "2026.03.19"
 }

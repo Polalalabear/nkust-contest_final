@@ -27,6 +27,7 @@ View → ViewModel → Service → Engine
 
 - SwiftUI (iOS 26)
 - @Observable (Swift Macro)
+- Swift Charts
 - SF Symbols
 - MapKit
 - MVVM 架構
@@ -39,7 +40,7 @@ nkust-contest/nkust-contest/
 ├── State/          # AppState (@Observable)
 ├── Shared/
 │   ├── Models/     # AppMode, DecisionModels
-│   └── Components/ # VoiceToggle, ModeHeader, OverlayCard, SwipeHint
+│   └── Components/ # VoiceToggle, ModeHeader, OverlayCard, SwipeHint, HealthChart
 ├── Modules/
 │   ├── ChooseUser/ # 身份選擇
 │   ├── DeviceInfo/ # 裝置資訊
@@ -65,6 +66,10 @@ nkust-contest/nkust-contest/
 - [x] 健康數據詳細頁面（步數/距離/站立分鐘 + 期間篩選 + 排序）
 - [x] 月曆式全部健康資料頁面（日期點擊詳細 + 期間平均）
 - [x] 交接文件 (handoff.md)
+- [x] 一鍵取得即時位置 + 最近醫院按鈕
+- [x] 照護者個人資料可編輯（姓名/關係/緊急電話）
+- [x] 健康圖表（長條圖/折線圖/圓餅圖切換）
+- [x] 版本號更新至 v1.1.0
 - [ ] DecisionEngine 實作
 - [ ] FeedbackManager 實作（CoreHaptics + AVSpeechSynthesizer）
 - [ ] AI Service 接入（CoreML / Gemini）

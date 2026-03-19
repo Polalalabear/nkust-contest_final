@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct HealthDetailView: View {
     let metric: HealthMetric
@@ -6,6 +7,7 @@ struct HealthDetailView: View {
 
     @State private var selectedPeriod: HealthPeriod = .week
     @State private var sortOrder: SortOrder = .descending
+    @State private var chartStyle: ChartStyle = .bar
 
     private var filteredRecords: [DailyHealthRecord] {
         let data: [DailyHealthRecord]
@@ -17,6 +19,14 @@ struct HealthDetailView: View {
         return sortOrder == .descending
             ? data.sorted { $0.date > $1.date }
             : data.sorted { $0.date < $1.date }
+    }
+
+    private var chartRecords: [DailyHealthRecord] {
+        switch selectedPeriod {
+        case .week: Array(records.prefix(7))
+        case .month: Array(records.prefix(30))
+        case .threeMonths: records
+        }
     }
 
     private var average: Double {
@@ -42,6 +52,15 @@ struct HealthDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
+            }
+
+            Section("圖表") {
+                HealthChartView(
+                    records: chartRecords,
+                    metric: metric,
+                    chartStyle: $chartStyle
+                )
+                .padding(.vertical, 4)
             }
 
             Section {
