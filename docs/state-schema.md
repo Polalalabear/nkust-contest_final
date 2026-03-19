@@ -122,3 +122,30 @@ It is a **machine-readable development log**
 **Notes**
 - All Service implementations are stubs with TODOs for real integrations
 - `#Preview` macros were removed to avoid sandbox macro-plugin failure during CI-like build
+
+---
+
+### [2026-03-19 14:47]
+
+**Feature**
+- Fix MemberImportVisibility compile errors and add #Preview to all View files
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/App/AppEntry.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+- /nkust-contest/nkust-contest/Modules/LTCMode/View/LTCModeView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+
+**State Changes**
+- Added `import Combine` to AppEntry and all View files (required by MemberImportVisibility for @StateObject)
+- Added `#Preview` blocks to AppRouter, WalkModeView, RecognitionModeView, LTCModeView, DashboardView
+
+**Test Coverage**
+- Full unsandboxed xcodebuild compile check: generic/platform=iOS
+- Result: PASS
+
+**Notes**
+- `#Preview` macros require unsandboxed swift-plugin-server; they compile in Xcode but fail in sandboxed CLI
+- Stale Xcode index may still show phantom errors for deleted ContentView/nkust_contestApp until index rebuild
