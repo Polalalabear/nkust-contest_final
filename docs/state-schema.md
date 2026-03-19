@@ -87,25 +87,38 @@ It is a **machine-readable development log**
 
 ---
 
-### [2026-03-19 14:30]
+### [2026-03-19 14:40]
 
 **Feature**
-- Implemented DecisionEngine with 3x3 risk scoring and action output (`stop`, `moveLeft`, `moveRight`, `safe`)
+- Build MVVM app skeleton with strict layer/module separation and stub-only external services
 
 **Modules Affected**
-- /Package.swift
-- /Sources/CoreEngine/DecisionEngine.swift
-- /Tests/CoreEngineTests/DecisionEngineTests.swift
+- /nkust-contest/nkust-contest/App/AppEntry.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/State/AppState.swift
+- /nkust-contest/nkust-contest/Shared/Models/AppMode.swift
+- /nkust-contest/nkust-contest/Shared/Models/DecisionModels.swift
+- /nkust-contest/nkust-contest/Core/Engine/DecisionEngine.swift
+- /nkust-contest/nkust-contest/Core/Engine/FeedbackManager.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/**
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/**
+- /nkust-contest/nkust-contest/Modules/LTCMode/**
+- /nkust-contest/nkust-contest/Modules/Dashboard/**
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+- /nkust-contest/nkust-contest/Services/Feedback/FeedbackService.swift
+- /nkust-contest/nkust-contest/ContentView.swift (removed)
+- /nkust-contest/nkust-contest/nkust_contestApp.swift (removed)
 
 **State Changes**
-- Added `NavigationAction` output contract for engine decisions
-- Added `GridRiskInput` and `RiskScore` for deterministic 3x3 grid evaluation
-- Added `DecisionResult` and `DecisionEngineError` for typed engine output and validation
+- Added global `AppState` container scaffold with mode/mute state placeholders
+- Added app navigation entry points for Walk/Recognition/LTC/Dashboard modules
+- Added deterministic decision/result model scaffolding for future engine logic
 
 **Test Coverage**
-- Unit tests for stop condition, left/right directional correction, safe condition, and invalid grid size
+- iOS compile check with `xcodebuild` against `generic/platform=iOS` and local DerivedData
 - Result: PASS
 
 **Notes**
-- Threshold values are currently fixed in engine initializer defaults
-- TODO: externalize thresholds into app configuration/state when integration layer exists
+- All Service implementations are stubs with TODOs for real integrations
+- `#Preview` macros were removed to avoid sandbox macro-plugin failure during CI-like build

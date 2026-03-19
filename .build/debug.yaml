@@ -1,0 +1,112 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "CoreEngine-arm64-apple-macosx26.0-debug.module": ["<CoreEngine-arm64-apple-macosx26.0-debug.module>"]
+  "CoreEngineTests-arm64-apple-macosx26.0-debug.module": ["<CoreEngineTests-arm64-apple-macosx26.0-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.module": ["<RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.module>"]
+  "RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.test": ["<RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.test>"]
+  "main": ["<CoreEngine-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<CoreEngine-arm64-apple-macosx26.0-debug.module>","<CoreEngineTests-arm64-apple-macosx26.0-debug.module>","<RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.test>"]
+default: "main"
+nodes:
+  "/Users/polalabear/Developer/全國電子/Sources/CoreEngine/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/polalabear/Developer/全國電子/Tests/CoreEngineTests/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/polalabear/Developer/全國電子/Sources/CoreEngine/DecisionEngine.swift"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/sources"]
+    description: "Write auxiliary file /Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/sources"
+
+  "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/polalabear/Developer/全國電子/Tests/CoreEngineTests/DecisionEngineTests.swift"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/sources"]
+    description: "Write auxiliary file /Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/sources"
+
+  "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.derived/runner.swift"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/sources"]
+    description: "Write auxiliary file /Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/sources"
+
+  "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.derived/runner.swift":
+    tool: test-entry-point-tool
+    inputs: []
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.derived/runner.swift"]
+
+  "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/DecisionEngine.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/runner.swift.o"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.product/Objects.LinkFileList"
+
+  "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<CoreEngine-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/DecisionEngine.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngine.swiftmodule"]
+    outputs: ["<CoreEngine-arm64-apple-macosx26.0-debug.module>"]
+
+  "<CoreEngineTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngineTests.swiftmodule"]
+    outputs: ["<CoreEngineTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "<RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/runner.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/RealtimeDecisionSystemPackageTests.swiftmodule"]
+    outputs: ["<RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "<RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.test>":
+    tool: phony
+    inputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.xctest/Contents/MacOS/RealtimeDecisionSystemPackageTests"]
+    outputs: ["<RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.test>"]
+
+  "C.CoreEngine-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/polalabear/Developer/全國電子/Sources/CoreEngine/DecisionEngine.swift","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/sources"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/DecisionEngine.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngine.swiftmodule"]
+    description: "Compiling Swift Module 'CoreEngine' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","CoreEngine","-emit-dependencies","-emit-module","-emit-module-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngine.swiftmodule","-output-file-map","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/sources","-I","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/include/CoreEngine-Swift.h","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","全國電子"]
+
+  "C.CoreEngineTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/polalabear/Developer/全國電子/Tests/CoreEngineTests/DecisionEngineTests.swift","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngine.swiftmodule","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/sources"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngineTests.swiftmodule"]
+    description: "Compiling Swift Module 'CoreEngineTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","CoreEngineTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngineTests.swiftmodule","-output-file-map","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/sources","-I","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","全國電子"]
+
+  "C.RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.derived/runner.swift","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngineTests.swiftmodule","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/sources"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/runner.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/RealtimeDecisionSystemPackageTests.swiftmodule"]
+    description: "Compiling Swift Module 'RealtimeDecisionSystemPackageTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","RealtimeDecisionSystemPackageTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/RealtimeDecisionSystemPackageTests.swiftmodule","-output-file-map","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/sources","-I","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/include/RealtimeDecisionSystemPackageTests-Swift.h","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","全國電子"]
+
+  "C.RealtimeDecisionSystemPackageTests-arm64-apple-macosx26.0-debug.test":
+    tool: shell
+    inputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/DecisionEngine.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.build/runner.swift.o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.product/Objects.LinkFileList"]
+    outputs: ["/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.xctest/Contents/MacOS/RealtimeDecisionSystemPackageTests"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.xctest/Contents/MacOS/RealtimeDecisionSystemPackageTests"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug","-o","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.xctest/Contents/MacOS/RealtimeDecisionSystemPackageTests","-module-name","RealtimeDecisionSystemPackageTests","-Xlinker","-no_warn_duplicate_libraries","-Xlinker","-bundle","-Xlinker","-rpath","-Xlinker","@loader_path/../../../","@/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/RealtimeDecisionSystemPackageTests.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-Xlinker","-add_ast_path","-Xlinker","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngine.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/CoreEngineTests.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/Modules/RealtimeDecisionSystemPackageTests.swiftmodule","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/polalabear/Developer/全國電子/Sources/CoreEngine/","/Users/polalabear/Developer/全國電子/Tests/CoreEngineTests/","/Users/polalabear/Developer/全國電子/Package.swift","/Users/polalabear/Developer/全國電子/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

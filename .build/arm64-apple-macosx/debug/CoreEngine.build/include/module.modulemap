@@ -1,0 +1,3 @@
+module CoreEngine {
+    header "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngine.build/include/CoreEngine-Swift.h"
+}

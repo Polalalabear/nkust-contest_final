@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/master.swiftdeps"
+  },
+  "/Users/polalabear/Developer/全國電子/Tests/CoreEngineTests/DecisionEngineTests.swift": {
+    "dependencies": "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.d",
+    "object": "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.swift.o",
+    "swiftmodule": "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.swiftdeps",
+    "diagnostics": "/Users/polalabear/Developer/全國電子/.build/arm64-apple-macosx/debug/CoreEngineTests.build/DecisionEngineTests.dia"
+  }
+}
