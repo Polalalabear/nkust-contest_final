@@ -21,6 +21,11 @@ final class AppState {
     var visUserLatitude: Double = 22.6273
     var visUserLongitude: Double = 120.3014
 
-    static let appVersion = "1.1.0"
+    // Preferences
+    var showCharts: Bool = true
+    var preferredChartStyle: ChartStyle = .bar
+    var isDarkMode: Bool = false
+
+    static let appVersion = "1.2.0"
     static let buildDate = "2026.03.19"
 }

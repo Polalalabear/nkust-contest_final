@@ -3,6 +3,7 @@ import MapKit
 
 struct DashboardView: View {
     @Environment(AppState.self) private var appState
+
     @State private var selectedTab: DashboardTab = .summary
 
     var body: some View {
@@ -15,6 +16,7 @@ struct DashboardView: View {
                 LocationMapView()
             }
         }
+        .preferredColorScheme(appState.isDarkMode ? .dark : .light)
     }
 }
 
@@ -29,9 +31,6 @@ struct SummaryView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = DashboardViewModel()
     @State private var showProfile = false
-    @State private var stepsChartStyle: ChartStyle = .bar
-    @State private var distanceChartStyle: ChartStyle = .bar
-    @State private var standingChartStyle: ChartStyle = .bar
 
     var body: some View {
         NavigationStack {
@@ -40,19 +39,20 @@ struct SummaryView: View {
                     actionButtons
                     quickCallButton
 
+                    chartToggle
+
                     NavigationLink {
                         HealthDetailView(
                             metric: .steps,
                             records: DailyHealthRecord.mockThreeMonths()
                         )
                     } label: {
-                        healthCardWithChart(
+                        healthCard(
                             icon: "figure.walk",
                             title: "行走步數",
                             value: "\(viewModel.todaySteps)",
                             unit: "步",
-                            metric: .steps,
-                            chartStyle: $stepsChartStyle
+                            metric: .steps
                         )
                     }
                     .buttonStyle(.plain)
@@ -63,13 +63,12 @@ struct SummaryView: View {
                             records: DailyHealthRecord.mockThreeMonths()
                         )
                     } label: {
-                        healthCardWithChart(
+                        healthCard(
                             icon: "map",
                             title: "行走距離",
                             value: String(format: "%.1f", viewModel.todayDistance),
                             unit: "公里",
-                            metric: .distance,
-                            chartStyle: $distanceChartStyle
+                            metric: .distance
                         )
                     }
                     .buttonStyle(.plain)
@@ -80,13 +79,12 @@ struct SummaryView: View {
                             records: DailyHealthRecord.mockThreeMonths()
                         )
                     } label: {
-                        healthCardWithChart(
+                        healthCard(
                             icon: "figure.stand",
                             title: "站立分鐘數",
                             value: "\(viewModel.todayStanding)",
                             unit: "分鐘",
-                            metric: .standing,
-                            chartStyle: $standingChartStyle
+                            metric: .standing
                         )
                     }
                     .buttonStyle(.plain)
@@ -117,6 +115,16 @@ struct SummaryView: View {
                 ProfileSheetView()
             }
         }
+    }
+
+    // MARK: - Chart Toggle
+
+    private var chartToggle: some View {
+        @Bindable var state = appState
+        return Toggle(isOn: $state.showCharts) {
+            Label("顯示圖表", systemImage: "chart.bar.xaxis")
+        }
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Action Buttons
@@ -215,15 +223,14 @@ struct SummaryView: View {
         .accessibilityLabel("快速通話")
     }
 
-    // MARK: - Health Card + Chart
+    // MARK: - Health Card
 
-    private func healthCardWithChart(
+    private func healthCard(
         icon: String,
         title: String,
         value: String,
         unit: String,
-        metric: HealthMetric,
-        chartStyle: Binding<ChartStyle>
+        metric: HealthMetric
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -247,11 +254,13 @@ struct SummaryView: View {
                 Spacer()
             }
 
-            HealthChartView(
-                records: viewModel.weekRecords,
-                metric: metric,
-                chartStyle: chartStyle
-            )
+            if appState.showCharts {
+                HealthChartView(
+                    records: viewModel.weekRecords,
+                    metric: metric,
+                    chartStyle: appState.preferredChartStyle
+                )
+            }
         }
         .padding()
         .background(
@@ -287,6 +296,7 @@ struct ProfileSheetView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var isEditing = false
+    @State private var showPreferences = false
 
     var body: some View {
         @Bindable var state = appState
@@ -346,6 +356,12 @@ struct ProfileSheetView: View {
                     }
                 }
 
+                Section {
+                    NavigationLink("設定偏好") {
+                        PreferencesView()
+                    }
+                }
+
                 Section("裝置資訊") {
                     LabeledContent("裝置連線", value: appState.deviceConnected ? "已連接" : "未連接")
                     LabeledContent("裝置電量", value: "\(appState.deviceBattery) %")
@@ -387,6 +403,53 @@ struct ProfileSheetView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Preferences View
+
+struct PreferencesView: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        @Bindable var state = appState
+        List {
+            Section("外觀模式") {
+                Toggle(isOn: $state.isDarkMode) {
+                    Label(
+                        appState.isDarkMode ? "夜間模式" : "日間模式",
+                        systemImage: appState.isDarkMode ? "moon.fill" : "sun.max.fill"
+                    )
+                }
+            }
+
+            Section("圖表樣式") {
+                Picker("圖表類型", selection: $state.preferredChartStyle) {
+                    ForEach(ChartStyle.allCases) { style in
+                        Label(style.rawValue, systemImage: style.icon).tag(style)
+                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            }
+
+            Section("預覽") {
+                HealthChartView(
+                    records: DailyHealthRecord.mockWeek(),
+                    metric: .steps,
+                    chartStyle: appState.preferredChartStyle
+                )
+                .padding(.vertical, 4)
+            }
+
+            Section {
+                Toggle(isOn: $state.showCharts) {
+                    Label("在主控台顯示圖表", systemImage: "chart.bar.xaxis")
+                }
+            }
+        }
+        .navigationTitle("設定偏好")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

@@ -4,30 +4,17 @@ import Charts
 struct HealthChartView: View {
     let records: [DailyHealthRecord]
     let metric: HealthMetric
-    @Binding var chartStyle: ChartStyle
+    let chartStyle: ChartStyle
 
     private var chartData: [(label: String, value: Double)] {
         records.sorted { $0.date < $1.date }.map { rec in
-            let label = rec.date.formatted(.dateTime.month(.abbreviated).day())
-            return (label, metric.value(from: rec))
+            (rec.date.shortMD, metric.value(from: rec))
         }
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            chartStylePicker
-            chartContent
-                .frame(height: 200)
-        }
-    }
-
-    private var chartStylePicker: some View {
-        Picker("圖表類型", selection: $chartStyle) {
-            ForEach(ChartStyle.allCases) { style in
-                Label(style.rawValue, systemImage: style.icon).tag(style)
-            }
-        }
-        .pickerStyle(.segmented)
+        chartContent
+            .frame(height: 200)
     }
 
     @ViewBuilder
@@ -103,8 +90,8 @@ struct HealthChartView: View {
             let end = min(i + chunkSize, count)
             let chunk = sorted[i..<end]
             let avg = chunk.reduce(0.0) { $0 + metric.value(from: $1) } / Double(chunk.count)
-            let startDate = chunk.first!.date.formatted(.dateTime.month(.abbreviated).day())
-            let endDate = chunk.last!.date.formatted(.dateTime.month(.abbreviated).day())
+            let startDate = chunk.first!.date.shortMD
+            let endDate = chunk.last!.date.shortMD
             result.append((label: "\(startDate)–\(endDate)", value: avg))
         }
         return result
@@ -115,7 +102,7 @@ struct HealthChartView: View {
     HealthChartView(
         records: DailyHealthRecord.mockWeek(),
         metric: .steps,
-        chartStyle: .constant(.bar)
+        chartStyle: .bar
     )
     .padding()
 }

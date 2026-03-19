@@ -70,6 +70,11 @@ nkust-contest/nkust-contest/
 - [x] 照護者個人資料可編輯（姓名/關係/緊急電話）
 - [x] 健康圖表（長條圖/折線圖/圓餅圖切換）
 - [x] 版本號更新至 v1.1.0
+- [x] 圖表顯示開關 toggle + 圖表樣式移至設定偏好
+- [x] 日期格式統一為 M/d (e.g. 3/15)
+- [x] 設定偏好（日間/夜間模式、圖表樣式選擇含預覽）
+- [x] 匯出 CSV 按鈕（stub，可選擇時間範圍）
+- [x] 版本號更新至 v1.2.0
 - [ ] DecisionEngine 實作
 - [ ] FeedbackManager 實作（CoreHaptics + AVSpeechSynthesizer）
 - [ ] AI Service 接入（CoreML / Gemini）

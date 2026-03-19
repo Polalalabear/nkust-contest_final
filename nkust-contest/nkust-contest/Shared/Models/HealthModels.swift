@@ -1,5 +1,21 @@
 import Foundation
 
+extension Date {
+    var shortMD: String {
+        let c = Calendar.current
+        return "\(c.component(.month, from: self))/\(c.component(.day, from: self))"
+    }
+}
+
+enum ExportRange: String, CaseIterable, Identifiable {
+    case week = "近一週"
+    case month = "近一月"
+    case threeMonths = "近三月"
+    case all = "全部"
+
+    var id: String { rawValue }
+}
+
 struct DailyHealthRecord: Identifiable {
     let id = UUID()
     let date: Date

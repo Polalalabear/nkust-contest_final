@@ -2,12 +2,13 @@ import SwiftUI
 import Charts
 
 struct HealthDetailView: View {
+    @Environment(AppState.self) private var appState
+
     let metric: HealthMetric
     let records: [DailyHealthRecord]
 
     @State private var selectedPeriod: HealthPeriod = .week
     @State private var sortOrder: SortOrder = .descending
-    @State private var chartStyle: ChartStyle = .bar
 
     private var filteredRecords: [DailyHealthRecord] {
         let data: [DailyHealthRecord]
@@ -54,13 +55,15 @@ struct HealthDetailView: View {
                 .padding(.vertical, 8)
             }
 
-            Section("圖表") {
-                HealthChartView(
-                    records: chartRecords,
-                    metric: metric,
-                    chartStyle: $chartStyle
-                )
-                .padding(.vertical, 4)
+            if appState.showCharts {
+                Section("圖表") {
+                    HealthChartView(
+                        records: chartRecords,
+                        metric: metric,
+                        chartStyle: appState.preferredChartStyle
+                    )
+                    .padding(.vertical, 4)
+                }
             }
 
             Section {
@@ -82,7 +85,7 @@ struct HealthDetailView: View {
             Section("每日紀錄") {
                 ForEach(filteredRecords) { record in
                     HStack {
-                        Text(record.date, format: .dateTime.month().day().weekday())
+                        Text(record.date.shortMD)
                             .font(.subheadline)
                         Spacer()
                         Text("\(metric.formatted(metric.value(from: record))) \(metric.unit)")
@@ -104,5 +107,6 @@ struct HealthDetailView: View {
             metric: .steps,
             records: DailyHealthRecord.mockThreeMonths()
         )
+        .environment(AppState())
     }
 }

@@ -300,3 +300,42 @@ It is a **machine-readable development log**
 - Caregiver profile data is in-memory only — TODO: persist with SwiftData
 - Charts use Swift Charts framework (native Apple, allowed by tech-stack.md)
 - Version is now 1.1.0
+
+---
+
+### [2026-03-19 17:45]
+
+**Feature**
+- Chart show/hide toggle on Dashboard + HealthDetail + AllHealthData (reads appState.showCharts)
+- Chart style picker moved from inline views to "設定偏好" (PreferencesView) in profile sheet; includes live preview
+- Day/night mode toggle in PreferencesView (appState.isDarkMode → .preferredColorScheme)
+- Date format changed from localized to "M/d" (e.g. 3/15) across all health views
+- CSV export button at bottom of AllHealthDataView with time range selection dialog (stub)
+- ExportRange enum (.week, .month, .threeMonths, .all) for export scope
+- Version bumped to 1.2.0
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/State/AppState.swift (added showCharts, preferredChartStyle, isDarkMode; version → 1.2.0)
+- /nkust-contest/nkust-contest/Shared/Models/HealthModels.swift (added Date.shortMD extension, ExportRange enum)
+- /nkust-contest/nkust-contest/Shared/Components/HealthChartView.swift (removed picker, accepts plain ChartStyle, uses shortMD)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift (chart toggle, removed per-card chart pickers, added PreferencesView, .preferredColorScheme)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/HealthDetailView.swift (removed local chartStyle, reads appState, shortMD dates)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/AllHealthDataView.swift (removed local chartStyle, reads appState, shortMD dates, added CSV export section)
+
+**State Changes**
+- AppState: added showCharts (Bool), preferredChartStyle (ChartStyle), isDarkMode (Bool)
+- HealthChartView: chartStyle parameter changed from Binding to plain value
+- Chart style picker removed from SummaryView, HealthDetailView, AllHealthDataView
+- PreferencesView: new view with dark mode toggle, chart style inline picker + live preview, show charts toggle
+- DashboardView: applies .preferredColorScheme based on isDarkMode
+- AllHealthDataView: confirmationDialog for CSV export range selection
+
+**Test Coverage**
+- Full xcodebuild compile: generic/platform=iOS (unsandboxed)
+- Result: PASS
+
+**Notes**
+- CSV export is stub only — TODO: implement actual CSV generation via ShareLink / UIActivityViewController
+- Dark mode uses .preferredColorScheme on DashboardView; only affects caregiver flow currently
+- Preferences are in-memory — TODO: persist with SwiftData / UserDefaults
+- Version is now 1.2.0

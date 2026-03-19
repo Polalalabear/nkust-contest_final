@@ -2,13 +2,17 @@ import SwiftUI
 import Charts
 
 struct AllHealthDataView: View {
+    @Environment(AppState.self) private var appState
+
     @State private var records = DailyHealthRecord.mockThreeMonths()
     @State private var selectedDate: Date? = nil
     @State private var displayedMonth: Date = Date()
     @State private var selectedPeriod: HealthPeriod = .month
     @State private var sortOrder: SortOrder = .descending
-    @State private var chartStyle: ChartStyle = .bar
     @State private var chartMetric: HealthMetric = .steps
+
+    @State private var showExportSheet = false
+    @State private var exportRange: ExportRange = .month
 
     private let calendar = Calendar.current
 
@@ -65,7 +69,9 @@ struct AllHealthDataView: View {
 
     var body: some View {
         List {
-            chartSection
+            if appState.showCharts {
+                chartSection
+            }
             calendarSection
             periodAndSortSection
             averagesSection
@@ -75,9 +81,19 @@ struct AllHealthDataView: View {
             }
 
             dailyListSection
+            exportSection
         }
         .navigationTitle("所有健康資料")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("選擇匯出範圍", isPresented: $showExportSheet, titleVisibility: .visible) {
+            ForEach(ExportRange.allCases) { range in
+                Button(range.rawValue) {
+                    exportRange = range
+                    // TODO: implement actual CSV export via ShareLink / UIActivityViewController
+                }
+            }
+            Button("取消", role: .cancel) {}
+        }
     }
 
     // MARK: - Chart
@@ -94,7 +110,7 @@ struct AllHealthDataView: View {
             HealthChartView(
                 records: chartRecords,
                 metric: chartMetric,
-                chartStyle: $chartStyle
+                chartStyle: appState.preferredChartStyle
             )
             .padding(.vertical, 4)
         }
@@ -235,7 +251,7 @@ struct AllHealthDataView: View {
     // MARK: - Daily Detail
 
     private func dailyDetailSection(_ rec: DailyHealthRecord) -> some View {
-        Section("\(rec.date, format: .dateTime.month().day().weekday()) 詳細") {
+        Section("\(rec.date.shortMD) 詳細") {
             detailRow(icon: "figure.walk", label: "步數", value: "\(rec.steps)", unit: "步")
             detailRow(icon: "map", label: "距離", value: String(format: "%.1f", rec.distanceKm), unit: "公里")
             detailRow(icon: "figure.stand", label: "站立", value: "\(rec.standingMinutes)", unit: "分鐘")
@@ -264,7 +280,7 @@ struct AllHealthDataView: View {
         Section("每日紀錄") {
             ForEach(filteredRecords) { rec in
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(rec.date, format: .dateTime.month().day().weekday())
+                    Text(rec.date.shortMD)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     HStack(spacing: 16) {
@@ -291,10 +307,28 @@ struct AllHealthDataView: View {
                 .foregroundStyle(.secondary)
         }
     }
+
+    // MARK: - Export
+
+    private var exportSection: some View {
+        Section {
+            Button {
+                showExportSheet = true
+            } label: {
+                Label("匯出 CSV", systemImage: "square.and.arrow.up")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+        } footer: {
+            Text("選擇時間範圍後匯出健康紀錄為 CSV 檔案")
+                .font(.caption)
+        }
+    }
 }
 
 #Preview {
     NavigationStack {
         AllHealthDataView()
+            .environment(AppState())
     }
 }

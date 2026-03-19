@@ -123,9 +123,13 @@ ChooseUserView
 │
 └── 選擇「照護者」→ DashboardView
     ├── Tab 1: SummaryView
+    │   ├── 圖表顯示 toggle
     │   ├── 健康卡片 → NavigationLink → HealthDetailView
-    │   ├── 顯示所有健康資料 → NavigationLink → AllHealthDataView
-    │   └── 個人資訊按鈕 → Sheet → ProfileSheetView (含登出)
+    │   ├── 顯示所有健康資料 → NavigationLink → AllHealthDataView (底部含匯出 CSV)
+    │   └── 個人資訊按鈕 → Sheet → ProfileSheetView
+    │       ├── 個人資料（可編輯）
+    │       ├── 設定偏好 → PreferencesView（圖表樣式+預覽、日夜模式、圖表開關）
+    │       └── 登出
     └── Tab 2: LocationMapView
 ```
 
@@ -150,7 +154,12 @@ ChooseUserView
 - [x] 一鍵取得視障者即時位置 + 顯示最近醫院按鈕
 - [x] 照護者個人資料可編輯（姓名、關係、緊急聯絡電話）
 - [x] Dashboard 移除裝置狀態列（僅保留於個人資訊）
-- [x] 版本號管理（v1.1.0）
+- [x] 版本號管理（v1.1.0 → v1.2.0）
+- [x] 圖表顯示 toggle（Dashboard / HealthDetail / AllHealthData）
+- [x] 圖表樣式選擇移至「設定偏好」（含即時預覽）
+- [x] 日間/夜間模式切換（PreferencesView → .preferredColorScheme）
+- [x] 日期格式統一 M/d（e.g. 3/15）
+- [x] 匯出 CSV 按鈕（AllHealthDataView 底部，stub，可選時間範圍）
 - [x] `#Preview` 加入所有 View 檔案
 - [x] README.md + .gitignore
 
@@ -164,9 +173,10 @@ ChooseUserView
 | 🟡 P1 | MJPEG Stream 接入 | URLSession 串流影像 |
 | 🟡 P1 | 真實攝影機整合 | AVFoundation 替換 CameraPreviewPlaceholder |
 | 🟡 P1 | 真實定位整合 | CoreLocation 替換靜態座標 |
+| 🟡 P1 | CSV 匯出實作 | ShareLink / UIActivityViewController 實際匯出 |
 | 🟢 P2 | HealthKit 整合 | 替換 mock 健康數據 |
 | 🟢 P2 | 使用者認證 | 替換 placeholder email/name |
-| 🟢 P2 | SwiftData 本地儲存 | 持久化設定與歷史紀錄 |
+| 🟢 P2 | SwiftData 本地儲存 | 持久化設定（偏好、暗色模式）與歷史紀錄 |
 | 🟢 P2 | 無障礙優化 | VoiceOver 完整測試與修正 |
 | ⚪ P3 | 單元測試 | Engine 層 + ViewModel 測試 |
 | ⚪ P3 | UI 測試 | 關鍵導航流程自動化測試 |
