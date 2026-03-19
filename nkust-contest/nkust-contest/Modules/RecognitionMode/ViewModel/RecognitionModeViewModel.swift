@@ -1,9 +1,11 @@
-import Foundation
-import Combine
+import SwiftUI
+import Observation
 
-final class RecognitionModeViewModel: ObservableObject {
-    @Published var showOverlay: Bool = false
-    @Published var overlayMessage: String = ""
+@Observable
+final class RecognitionModeViewModel {
+    var isSuccess: Bool = false
+    var resultDescription: String = ""
+    var useDeviceCamera: Bool = true
 
     private let service: RecognitionModeServicing
 
@@ -13,7 +15,7 @@ final class RecognitionModeViewModel: ObservableObject {
 
     func requestRecognition() async {
         let message = await service.recognizeCurrentFrame()
-        overlayMessage = message
-        showOverlay = !message.isEmpty
+        resultDescription = message
+        isSuccess = !message.isEmpty
     }
 }

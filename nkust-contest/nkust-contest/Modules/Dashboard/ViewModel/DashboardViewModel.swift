@@ -1,7 +1,12 @@
-import Foundation
-import Combine
+import SwiftUI
+import Observation
 
-final class DashboardViewModel: ObservableObject {
+@Observable
+final class DashboardViewModel {
+    var steps: Int = 3279
+    var distance: Double = 2.7
+    var standingMinutes: Int = 93
+
     private let service: DashboardServicing
 
     init(service: DashboardServicing = StubDashboardService()) {

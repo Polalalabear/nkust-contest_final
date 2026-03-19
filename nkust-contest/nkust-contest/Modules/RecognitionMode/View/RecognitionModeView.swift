@@ -1,26 +1,111 @@
 import SwiftUI
-import Combine
 
 struct RecognitionModeView: View {
-    @StateObject private var viewModel = RecognitionModeViewModel()
+    @Binding var isVoiceEnabled: Bool
+    @State private var viewModel = RecognitionModeViewModel()
 
     var body: some View {
         ZStack {
-            Rectangle()
-                .fill(Color.black.opacity(0.1))
-                .ignoresSafeArea()
+            CameraPreviewPlaceholder()
 
-            if viewModel.showOverlay {
-                Text(viewModel.overlayMessage)
-                    .padding()
-                    .background(.thinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(spacing: 12) {
+                ModeHeaderBar(
+                    title: "辨識模式",
+                    isVoiceEnabled: $isVoiceEnabled
+                )
+                .padding(.top, 54)
+
+                if viewModel.isSuccess {
+                    successCard
+                    resultCard
+                } else {
+                    scanningCard
+                }
+
+                Spacer()
+
+                if viewModel.isSuccess {
+                    cameraSourcePicker
+                }
+
+                SwipeHintBar(
+                    leftHint: AppMode.recognitionMode.swipeHint.left,
+                    rightHint: AppMode.recognitionMode.swipeHint.right
+                )
+                .padding(.bottom, 40)
             }
         }
-        .accessibilityLabel("Recognition mode camera preview")
+    }
+
+    private var scanningCard: some View {
+        OverlayCard(
+            backgroundColor: Color(white: 0.3),
+            iconLabel: "掃描",
+            title: "辨識中",
+            subtitle: "請持續將辨識物品擺放在鏡頭前方"
+        ) {
+            Image(systemName: "barcode.viewfinder")
+        }
+    }
+
+    private var successCard: some View {
+        OverlayCard(
+            backgroundColor: .green,
+            iconLabel: "完成",
+            title: "辨識成功"
+        ) {
+            Image(systemName: "checkmark")
+        }
+    }
+
+    private var resultCard: some View {
+        OverlayCard(
+            backgroundColor: Color(white: 0.3),
+            iconLabel: "描述",
+            title: "辨識結果",
+            subtitle: viewModel.resultDescription
+        ) {
+            Image(systemName: "doc.text")
+        }
+    }
+
+    private var cameraSourcePicker: some View {
+        HStack(spacing: 0) {
+            Text("穿戴裝置")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(viewModel.useDeviceCamera ? .white : .gray)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    viewModel.useDeviceCamera
+                        ? RoundedRectangle(cornerRadius: 8).fill(.gray.opacity(0.5))
+                        : nil
+                )
+                .onTapGesture { viewModel.useDeviceCamera = true }
+
+            Text("手機鏡頭")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(!viewModel.useDeviceCamera ? .white : .gray)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    !viewModel.useDeviceCamera
+                        ? RoundedRectangle(cornerRadius: 8).fill(.gray.opacity(0.5))
+                        : nil
+                )
+                .onTapGesture { viewModel.useDeviceCamera = false }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.black.opacity(0.4))
+        )
+        .padding(.horizontal, 40)
     }
 }
 
 #Preview {
-    RecognitionModeView()
+    RecognitionModeView(isVoiceEnabled: .constant(true))
 }

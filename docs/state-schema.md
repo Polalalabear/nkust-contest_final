@@ -149,3 +149,46 @@ It is a **machine-readable development log**
 **Notes**
 - `#Preview` macros require unsandboxed swift-plugin-server; they compile in Xcode but fail in sandboxed CLI
 - Stale Xcode index may still show phantom errors for deleted ContentView/nkust_contestApp until index rebuild
+
+---
+
+### [2026-03-19 16:15]
+
+**Feature**
+- Full UI implementation based on reference designs (ui/ folder)
+- Migrated to iOS 26 @Observable syntax, SF Symbols for all icons
+- Role selection flow: ChooseUserView → DeviceInfoView → MainTabView (visually impaired) or DashboardView (caregiver)
+- Page-swipeable mode switching: Walk ↔ Recognition ↔ LTC
+- Caregiver dashboard with summary + map tabs
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/App/AppEntry.swift (→ @Observable)
+- /nkust-contest/nkust-contest/App/AppRouter.swift (role-based routing)
+- /nkust-contest/nkust-contest/State/AppState.swift (→ @Observable, added device/phone/voice state)
+- /nkust-contest/nkust-contest/Shared/Models/AppMode.swift (added UserRole, swipe hints)
+- /nkust-contest/nkust-contest/Shared/Models/DecisionModels.swift (ObstacleInfo, DirectionInfo, TrafficLightInfo, ContactInfo)
+- /nkust-contest/nkust-contest/Shared/Components/* (5 new shared components)
+- /nkust-contest/nkust-contest/Modules/ChooseUser/View/ChooseUserView.swift (new)
+- /nkust-contest/nkust-contest/Modules/DeviceInfo/View/DeviceInfoView.swift (new)
+- /nkust-contest/nkust-contest/Modules/MainTab/View/MainTabView.swift (new)
+- /nkust-contest/nkust-contest/Modules/WalkMode/** (redesigned)
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/** (redesigned)
+- /nkust-contest/nkust-contest/Modules/LTCMode/** (redesigned)
+- /nkust-contest/nkust-contest/Modules/Dashboard/** (redesigned + LocationMapView)
+
+**State Changes**
+- AppState migrated from ObservableObject to @Observable
+- Added: userRole, isVoiceEnabled, deviceConnected, deviceBattery, phoneBattery, isLocationSharing
+- All ViewModels migrated to @Observable
+- All Views use @State for viewModel, @Binding for voice toggle, @Environment for AppState
+- Added ContactInfo, ObstacleInfo, DirectionInfo, TrafficLightInfo models
+
+**Test Coverage**
+- Full xcodebuild compile: generic/platform=iOS (unsandboxed)
+- Result: PASS
+
+**Notes**
+- All external services remain stubs (AI, Stream, Feedback)
+- Camera preview uses placeholder Rectangle — TODO: integrate AVFoundation
+- Map uses MapKit with static coordinates — TODO: integrate real location
+- Health data in Dashboard is mock — TODO: integrate HealthKit

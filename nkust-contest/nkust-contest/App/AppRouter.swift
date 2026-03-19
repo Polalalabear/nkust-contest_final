@@ -1,27 +1,36 @@
 import SwiftUI
 
 struct AppRouter: View {
+    @Environment(AppState.self) private var appState
+    @State private var showMainFlow = false
+
     var body: some View {
-        NavigationStack {
-            List {
-                NavigationLink("Walk Mode") {
-                    WalkModeView()
-                }
-                NavigationLink("Recognition Mode") {
-                    RecognitionModeView()
-                }
-                NavigationLink("LTC Mode") {
-                    LTCModeView()
-                }
-                NavigationLink("Dashboard") {
+        @Bindable var state = appState
+        Group {
+            if let role = appState.userRole {
+                switch role {
+                case .visuallyImpaired:
+                    if showMainFlow {
+                        MainTabView()
+                    } else {
+                        DeviceInfoView(
+                            isVoiceEnabled: $state.isVoiceEnabled,
+                            onStart: { showMainFlow = true }
+                        )
+                    }
+                case .caregiver:
                     DashboardView()
                 }
+            } else {
+                ChooseUserView(isVoiceEnabled: $state.isVoiceEnabled)
             }
-            .navigationTitle("Navigation System")
         }
+        .animation(.easeInOut, value: appState.userRole)
+        .animation(.easeInOut, value: showMainFlow)
     }
 }
 
 #Preview {
     AppRouter()
+        .environment(AppState())
 }

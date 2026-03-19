@@ -1,48 +1,73 @@
 import SwiftUI
-import Combine
 
 struct WalkModeView: View {
-    @StateObject private var viewModel = WalkModeViewModel()
+    @Binding var isVoiceEnabled: Bool
+    @State private var viewModel = WalkModeViewModel()
 
     var body: some View {
-        VStack {
-            VStack(spacing: 8) {
-                Text("Connection: \(viewModel.connectionStatus)")
-                Text("Battery: \(viewModel.batteryLevel)")
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Status bar")
+        ZStack {
+            CameraPreviewPlaceholder()
 
-            Spacer()
+            VStack(spacing: 12) {
+                ModeHeaderBar(
+                    title: "行走模式",
+                    isVoiceEnabled: $isVoiceEnabled
+                )
+                .padding(.top, 54)
 
-            Button("Main Button") {
-                viewModel.handleSingleTap()
-            }
-            .frame(maxWidth: .infinity, minHeight: 220)
-            .buttonStyle(.borderedProminent)
-            .accessibilityLabel("Main control button")
-            .onTapGesture(count: 2) {
-                viewModel.handleDoubleTap()
-            }
-            .onLongPressGesture(minimumDuration: 1.0) {
-                viewModel.handleLongPress()
-            }
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 2.5)
-                    .onEnded { _ in
-                        viewModel.handleVeryLongPress()
-                    }
-            )
+                if viewModel.trafficLight.isRed {
+                    trafficLightCard
+                } else if !viewModel.obstacle.description.isEmpty {
+                    obstacleCard
+                }
 
-            Spacer()
+                directionCard
 
-            Text("Walk Mode")
-                .accessibilityLabel("Mode indicator Walk Mode")
+                Spacer()
+
+                SwipeHintBar(
+                    leftHint: AppMode.walkMode.swipeHint.left,
+                    rightHint: AppMode.walkMode.swipeHint.right
+                )
+                .padding(.bottom, 40)
+            }
         }
-        .padding()
+    }
+
+    private var obstacleCard: some View {
+        OverlayCard(
+            backgroundColor: .blue,
+            iconLabel: "障礙",
+            title: viewModel.obstacle.description,
+            subtitle: "約 \(viewModel.obstacle.distance) 公尺"
+        ) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+        }
+    }
+
+    private var directionCard: some View {
+        OverlayCard(
+            backgroundColor: Color(white: 0.3),
+            iconLabel: "方向",
+            title: viewModel.direction.instruction,
+            subtitle: viewModel.direction.detail
+        ) {
+            Image(systemName: "location.north.fill")
+        }
+    }
+
+    private var trafficLightCard: some View {
+        OverlayCard(
+            backgroundColor: .red.opacity(0.9),
+            iconLabel: "號誌",
+            title: "紅燈",
+            subtitle: viewModel.trafficLight.instruction
+        ) {
+            Image(systemName: "traffic.light.fill")
+        }
     }
 }
 
 #Preview {
-    WalkModeView()
+    WalkModeView(isVoiceEnabled: .constant(true))
 }

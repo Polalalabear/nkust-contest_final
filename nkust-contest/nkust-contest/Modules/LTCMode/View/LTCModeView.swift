@@ -1,18 +1,133 @@
 import SwiftUI
-import Combine
 
 struct LTCModeView: View {
-    @StateObject private var viewModel = LTCModeViewModel()
+    @Binding var isVoiceEnabled: Bool
+    @State private var viewModel = LTCModeViewModel()
 
     var body: some View {
-        List(viewModel.contacts) { contact in
-            Text(contact.name)
-                .accessibilityLabel("Contact \(contact.name)")
+        ZStack {
+            CameraPreviewPlaceholder()
+
+            VStack(spacing: 12) {
+                ModeHeaderBar(
+                    title: "長照模式",
+                    isVoiceEnabled: $isVoiceEnabled
+                )
+                .padding(.top, 54)
+
+                locationCard
+
+                if viewModel.isCalling {
+                    Spacer()
+                    endCallButton
+                } else if viewModel.showContactList {
+                    contactListCard
+                    Spacer()
+                } else {
+                    Spacer()
+                    callCard
+                }
+
+                if !viewModel.isCalling {
+                    SwipeHintBar(
+                        leftHint: AppMode.ltcMode.swipeHint.left,
+                        rightHint: AppMode.ltcMode.swipeHint.right
+                    )
+                }
+
+                Spacer().frame(height: 30)
+            }
         }
-        .accessibilityLabel("LTC contact list")
+    }
+
+    private var locationCard: some View {
+        OverlayCard(
+            backgroundColor: Color(white: 0.35),
+            iconLabel: "位置",
+            title: viewModel.currentLocation,
+            subtitle: "分享位置"
+        ) {
+            Image(systemName: "figure.walk.diamond.fill")
+        }
+    }
+
+    private var callCard: some View {
+        Button {
+            viewModel.showContactList = true
+        } label: {
+            OverlayCard(
+                backgroundColor: Color.brown.opacity(0.8),
+                iconLabel: "電話",
+                title: "撥打電話給 \(viewModel.selectedContact?.name ?? "---")",
+                subtitle: "請長按螢幕五秒撥打電話"
+            ) {
+                Image(systemName: "phone.fill")
+            }
+        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 5.0)
+                .onEnded { _ in
+                    if let contact = viewModel.selectedContact {
+                        viewModel.callContact(contact)
+                    }
+                }
+        )
+        .accessibilityLabel("撥打電話")
+    }
+
+    private var contactListCard: some View {
+        VStack(spacing: 0) {
+            ForEach(viewModel.contacts) { contact in
+                Button {
+                    viewModel.selectedContact = contact
+                    viewModel.showContactList = false
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.8))
+                        Text(contact.name)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                        Text(contact.isAvailable ? "可接聽" : "不克接聽")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(contact.isAvailable ? .green : .red)
+                        Spacer()
+                    }
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 16)
+                }
+                .accessibilityLabel("\(contact.name) \(contact.isAvailable ? "可接聽" : "不克接聽")")
+
+                if contact.id != viewModel.contacts.last?.id {
+                    Divider().background(.white.opacity(0.2))
+                }
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.brown.opacity(0.75))
+        )
+        .padding(.horizontal)
+    }
+
+    private var endCallButton: some View {
+        Button {
+            viewModel.endCall()
+        } label: {
+            Image(systemName: "phone.down.fill")
+                .font(.title)
+                .foregroundStyle(.white)
+                .frame(width: 72, height: 72)
+                .background(Circle().fill(.red))
+        }
+        .accessibilityLabel("結束通話")
+        .padding(.bottom, 40)
     }
 }
 
 #Preview {
-    LTCModeView()
+    LTCModeView(isVoiceEnabled: .constant(true))
 }

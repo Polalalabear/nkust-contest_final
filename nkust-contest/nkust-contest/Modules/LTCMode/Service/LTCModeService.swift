@@ -1,5 +1,10 @@
 import Foundation
 
+struct Contact: Identifiable {
+    let id: UUID
+    let name: String
+}
+
 protocol LTCModeServicing {
     func fetchContacts() -> [Contact]
     func call(contact: Contact)
@@ -8,9 +13,12 @@ protocol LTCModeServicing {
 final class StubLTCModeService: LTCModeServicing {
     func fetchContacts() -> [Contact] {
         // TODO: load contacts from local data source
-        return [
-            Contact(id: UUID(), name: "Caregiver A"),
-            Contact(id: UUID(), name: "Caregiver B")
+        [
+            Contact(id: UUID(), name: "媽媽"),
+            Contact(id: UUID(), name: "爸爸"),
+            Contact(id: UUID(), name: "爺爺"),
+            Contact(id: UUID(), name: "奶奶"),
+            Contact(id: UUID(), name: "叔叔")
         ]
     }
 
