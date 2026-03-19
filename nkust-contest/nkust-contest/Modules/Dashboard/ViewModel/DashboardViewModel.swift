@@ -3,9 +3,11 @@ import Observation
 
 @Observable
 final class DashboardViewModel {
-    var steps: Int = 3279
-    var distance: Double = 2.7
-    var standingMinutes: Int = 93
+    var weekRecords: [DailyHealthRecord] = DailyHealthRecord.mockWeek()
+
+    var todaySteps: Int { weekRecords.first?.steps ?? 0 }
+    var todayDistance: Double { weekRecords.first?.distanceKm ?? 0 }
+    var todayStanding: Int { weekRecords.first?.standingMinutes ?? 0 }
 
     private let service: DashboardServicing
 
@@ -15,13 +17,5 @@ final class DashboardViewModel {
 
     func callUser() {
         service.callUser()
-    }
-
-    func sendVoiceMessage() {
-        service.sendVoiceMessage()
-    }
-
-    func viewLogs() {
-        service.viewLogs()
     }
 }

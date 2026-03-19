@@ -24,6 +24,7 @@ enum DashboardTab: Hashable {
 
 struct SummaryView: View {
     @Environment(AppState.self) private var appState
+    @State private var viewModel = DashboardViewModel()
     @State private var showProfile = false
 
     var body: some View {
@@ -32,25 +33,58 @@ struct SummaryView: View {
                 VStack(spacing: 16) {
                     statusBar
                     quickCallButton
-                    healthCard(
-                        icon: "flame.fill",
-                        title: "行走步數",
-                        value: "3279",
-                        unit: "步"
-                    )
-                    healthCard(
-                        icon: "flame.fill",
-                        title: "行走距離",
-                        value: "2.7",
-                        unit: "公里"
-                    )
-                    healthCard(
-                        icon: "flame.fill",
-                        title: "站立分鐘數",
-                        value: "93",
-                        unit: "分鐘"
-                    )
-                    allHealthDataLink
+
+                    NavigationLink {
+                        HealthDetailView(
+                            metric: .steps,
+                            records: DailyHealthRecord.mockThreeMonths()
+                        )
+                    } label: {
+                        healthCard(
+                            icon: "figure.walk",
+                            title: "行走步數",
+                            value: "\(viewModel.todaySteps)",
+                            unit: "步"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        HealthDetailView(
+                            metric: .distance,
+                            records: DailyHealthRecord.mockThreeMonths()
+                        )
+                    } label: {
+                        healthCard(
+                            icon: "map",
+                            title: "行走距離",
+                            value: String(format: "%.1f", viewModel.todayDistance),
+                            unit: "公里"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        HealthDetailView(
+                            metric: .standing,
+                            records: DailyHealthRecord.mockThreeMonths()
+                        )
+                    } label: {
+                        healthCard(
+                            icon: "figure.stand",
+                            title: "站立分鐘數",
+                            value: "\(viewModel.todayStanding)",
+                            unit: "分鐘"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        AllHealthDataView()
+                    } label: {
+                        allHealthDataLink
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding()
             }
@@ -119,7 +153,9 @@ struct SummaryView: View {
     }
 
     private var quickCallButton: some View {
-        Button { } label: {
+        Button {
+            viewModel.callUser()
+        } label: {
             Label("快速通話", systemImage: "phone.fill")
                 .font(.headline)
                 .fontWeight(.semibold)

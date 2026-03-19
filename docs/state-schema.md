@@ -227,3 +227,37 @@ It is a **machine-readable development log**
 **Notes**
 - Cyclic scroll uses DispatchQueue.main.asyncAfter(0.3s) to allow animation completion before jump
 - Profile email is placeholder — TODO: integrate authentication
+
+---
+
+### [2026-03-19 17:00]
+
+**Feature**
+- Detailed health data views: each health card (steps, distance, standing) now navigates to HealthDetailView with period filter (week/month/3-month), sort order (ascending/descending), and daily records list
+- AllHealthDataView: calendar-based view with month navigation, date tap for daily detail, period averages, sort controls, and full daily record list
+- DashboardViewModel now sources today's values from weekly mock records
+- HealthModels.swift: DailyHealthRecord, HealthMetric, HealthPeriod, SortOrder
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Shared/Models/HealthModels.swift (new)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift (NavigationLinks to health details + all-health)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/HealthDetailView.swift (new)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/AllHealthDataView.swift (new)
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift (weekRecords + computed today values)
+- /docs/handoff.md (new)
+
+**State Changes**
+- Added DailyHealthRecord model with mock generators (week/month/3-month)
+- Added HealthMetric, HealthPeriod, SortOrder enums
+- DashboardViewModel now holds weekRecords array; todaySteps/todayDistance/todayStanding are computed
+- SummaryView health cards are now NavigationLinks to HealthDetailView
+- "顯示所有健康資料" is now NavigationLink to AllHealthDataView
+
+**Test Coverage**
+- Full xcodebuild compile: generic/platform=iOS (unsandboxed)
+- Result: PASS
+
+**Notes**
+- Health data remains mock — TODO: integrate HealthKit
+- Calendar grid uses LazyVGrid with 7 columns, leading blanks for month alignment
+- handoff.md created for next conversation handoff

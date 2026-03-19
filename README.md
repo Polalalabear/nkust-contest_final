@@ -62,6 +62,9 @@ nkust-contest/nkust-contest/
 - [x] SF Symbols 全面採用
 - [x] 頁面循環滑動
 - [x] 照護者個人資訊頁面 + 登出
+- [x] 健康數據詳細頁面（步數/距離/站立分鐘 + 期間篩選 + 排序）
+- [x] 月曆式全部健康資料頁面（日期點擊詳細 + 期間平均）
+- [x] 交接文件 (handoff.md)
 - [ ] DecisionEngine 實作
 - [ ] FeedbackManager 實作（CoreHaptics + AVSpeechSynthesizer）
 - [ ] AI Service 接入（CoreML / Gemini）
