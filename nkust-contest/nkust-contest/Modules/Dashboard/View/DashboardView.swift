@@ -24,6 +24,7 @@ enum DashboardTab: Hashable {
 
 struct SummaryView: View {
     @Environment(AppState.self) private var appState
+    @State private var showProfile = false
 
     var body: some View {
         NavigationStack {
@@ -56,10 +57,18 @@ struct SummaryView: View {
             .navigationTitle("摘要")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Image(systemName: "person.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.primary)
+                    Button {
+                        showProfile = true
+                    } label: {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.primary)
+                    }
+                    .accessibilityLabel("個人資訊")
                 }
+            }
+            .sheet(isPresented: $showProfile) {
+                ProfileSheetView()
             }
         }
     }
@@ -174,6 +183,69 @@ struct SummaryView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(.regularMaterial)
         )
+    }
+}
+
+struct ProfileSheetView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 16) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 56))
+                            .foregroundStyle(.gray)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("照護者")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            Text("caregiver@example.com")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                Section("裝置資訊") {
+                    LabeledContent("裝置連線", value: appState.deviceConnected ? "已連接" : "未連接")
+                    LabeledContent("裝置電量", value: "\(appState.deviceBattery) %")
+                    LabeledContent("手機電量", value: "\(appState.phoneBattery) %")
+                    LabeledContent("定位分享", value: appState.isLocationSharing ? "開啟" : "關閉")
+                }
+
+                Section("關於") {
+                    LabeledContent("版本", value: "1.0.0")
+                    LabeledContent("建置", value: "2026.03.19")
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            appState.userRole = nil
+                        }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Label("登出", systemImage: "rectangle.portrait.and.arrow.right")
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("個人資訊")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") { dismiss() }
+                }
+            }
+        }
     }
 }
 

@@ -11,10 +11,13 @@ struct AppRouter: View {
                 switch role {
                 case .visuallyImpaired:
                     if showMainFlow {
-                        MainTabView()
+                        MainTabView(onBack: {
+                            showMainFlow = false
+                        })
                     } else {
                         DeviceInfoView(
                             isVoiceEnabled: $state.isVoiceEnabled,
+                            onBack: { appState.userRole = nil },
                             onStart: { showMainFlow = true }
                         )
                     }

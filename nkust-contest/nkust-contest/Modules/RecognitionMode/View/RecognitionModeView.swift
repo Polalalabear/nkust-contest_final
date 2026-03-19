@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecognitionModeView: View {
     @Binding var isVoiceEnabled: Bool
+    var onBack: (() -> Void)?
     @State private var viewModel = RecognitionModeViewModel()
 
     var body: some View {
@@ -11,7 +12,8 @@ struct RecognitionModeView: View {
             VStack(spacing: 12) {
                 ModeHeaderBar(
                     title: "辨識模式",
-                    isVoiceEnabled: $isVoiceEnabled
+                    isVoiceEnabled: $isVoiceEnabled,
+                    onBack: onBack
                 )
                 .padding(.top, 54)
 

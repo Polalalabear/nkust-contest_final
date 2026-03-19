@@ -192,3 +192,38 @@ It is a **machine-readable development log**
 - Camera preview uses placeholder Rectangle — TODO: integrate AVFoundation
 - Map uses MapKit with static coordinates — TODO: integrate real location
 - Health data in Dashboard is mock — TODO: integrate HealthKit
+
+---
+
+### [2026-03-19 16:40]
+
+**Feature**
+- Add README.md + .gitignore
+- Cyclic page-swipe (last→first, first→last) for mode switching
+- Caregiver profile sheet with device info + logout button
+- Back button on all visually-impaired screens (DeviceInfo, Walk, Recognition, LTC)
+- Fix DeviceInfoView back button wiring (was empty closure, now returns to ChooseUser)
+
+**Modules Affected**
+- /README.md (new)
+- /.gitignore (new)
+- /nkust-contest/nkust-contest/App/AppRouter.swift (pass onBack closures)
+- /nkust-contest/nkust-contest/Modules/DeviceInfo/View/DeviceInfoView.swift (add onBack param + wire button)
+- /nkust-contest/nkust-contest/Modules/MainTab/View/MainTabView.swift (cyclic scroll logic + onBack)
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift (add onBack param)
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift (add onBack param)
+- /nkust-contest/nkust-contest/Modules/LTCMode/View/LTCModeView.swift (add onBack param)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift (add ProfileSheetView + logout)
+
+**State Changes**
+- Navigation flow now fully bidirectional: back buttons set appState.userRole = nil or showMainFlow = false
+- Cyclic scroll implemented via sentinel pages (tag 0 and 4) that bounce to real pages (3 and 1)
+- ProfileSheetView reads AppState for device info; logout clears userRole
+
+**Test Coverage**
+- xcodebuild compile: generic/platform=iOS (unsandboxed)
+- Result: PASS
+
+**Notes**
+- Cyclic scroll uses DispatchQueue.main.asyncAfter(0.3s) to allow animation completion before jump
+- Profile email is placeholder — TODO: integrate authentication

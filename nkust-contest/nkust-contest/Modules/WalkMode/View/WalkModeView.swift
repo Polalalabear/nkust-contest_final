@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WalkModeView: View {
     @Binding var isVoiceEnabled: Bool
+    var onBack: (() -> Void)?
     @State private var viewModel = WalkModeViewModel()
 
     var body: some View {
@@ -11,7 +12,8 @@ struct WalkModeView: View {
             VStack(spacing: 12) {
                 ModeHeaderBar(
                     title: "行走模式",
-                    isVoiceEnabled: $isVoiceEnabled
+                    isVoiceEnabled: $isVoiceEnabled,
+                    onBack: onBack
                 )
                 .padding(.top, 54)
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LTCModeView: View {
     @Binding var isVoiceEnabled: Bool
+    var onBack: (() -> Void)?
     @State private var viewModel = LTCModeViewModel()
 
     var body: some View {
@@ -11,7 +12,8 @@ struct LTCModeView: View {
             VStack(spacing: 12) {
                 ModeHeaderBar(
                     title: "長照模式",
-                    isVoiceEnabled: $isVoiceEnabled
+                    isVoiceEnabled: $isVoiceEnabled,
+                    onBack: onBack
                 )
                 .padding(.top, 54)
 
@@ -99,7 +101,7 @@ struct LTCModeView: View {
                     .padding(.vertical, 14)
                     .padding(.horizontal, 16)
                 }
-                .accessibilityLabel("\(contact.name) \(contact.isAvailable ? "可接聽" : "不克接聽")")
+                .accessibilityLabel("\(contact.name) \(contact.isAvailable ? "可接聽" : "不克接聯")")
 
                 if contact.id != viewModel.contacts.last?.id {
                     Divider().background(.white.opacity(0.2))

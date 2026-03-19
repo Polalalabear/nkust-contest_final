@@ -3,6 +3,7 @@ import SwiftUI
 struct DeviceInfoView: View {
     @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool
+    var onBack: () -> Void
     var onStart: () -> Void
 
     var body: some View {
@@ -24,12 +25,17 @@ struct DeviceInfoView: View {
 
                 Spacer()
 
-                Text("點擊任意處開始啟動辨識")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                    .padding(.bottom, 20)
+                Button {
+                    onStart()
+                } label: {
+                    Text("點擊任意處開始啟動辨識")
+                        .font(.subheadline)
+                        .foregroundStyle(.gray)
+                        .padding(.bottom, 20)
+                }
             }
         }
+        .contentShape(Rectangle())
         .onTapGesture {
             onStart()
         }
@@ -37,7 +43,9 @@ struct DeviceInfoView: View {
 
     private var headerBar: some View {
         HStack {
-            Button { } label: {
+            Button {
+                onBack()
+            } label: {
                 Image(systemName: "chevron.left")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -155,6 +163,6 @@ struct DeviceInfoView: View {
 }
 
 #Preview {
-    DeviceInfoView(isVoiceEnabled: .constant(true), onStart: {})
+    DeviceInfoView(isVoiceEnabled: .constant(true), onBack: {}, onStart: {})
         .environment(AppState())
 }
