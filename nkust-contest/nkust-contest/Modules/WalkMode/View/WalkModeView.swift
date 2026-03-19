@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct WalkModeView: View {
     @StateObject private var viewModel = WalkModeViewModel()
@@ -40,4 +41,8 @@ struct WalkModeView: View {
         }
         .padding()
     }
+}
+
+#Preview {
+    WalkModeView()
 }

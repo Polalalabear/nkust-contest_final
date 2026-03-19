@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct RecognitionModeView: View {
     @StateObject private var viewModel = RecognitionModeViewModel()
@@ -18,4 +19,8 @@ struct RecognitionModeView: View {
         }
         .accessibilityLabel("Recognition mode camera preview")
     }
+}
+
+#Preview {
+    RecognitionModeView()
 }

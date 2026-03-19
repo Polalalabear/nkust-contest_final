@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
@@ -31,4 +32,8 @@ struct DashboardView: View {
         .padding()
         .accessibilityLabel("Caregiver dashboard")
     }
+}
+
+#Preview {
+    DashboardView()
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct LTCModeView: View {
     @StateObject private var viewModel = LTCModeViewModel()
@@ -10,4 +11,8 @@ struct LTCModeView: View {
         }
         .accessibilityLabel("LTC contact list")
     }
+}
+
+#Preview {
+    LTCModeView()
 }
