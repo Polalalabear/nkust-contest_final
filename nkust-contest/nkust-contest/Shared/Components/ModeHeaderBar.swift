@@ -83,5 +83,8 @@ struct ModeHeaderBar: View {
                 voiceEnabled: voiceEnabled
             )
         }
+        .onDisappear {
+            ConnectionStatusAnnouncer.shared.stopReminders(screenID: title)
+        }
     }
 }

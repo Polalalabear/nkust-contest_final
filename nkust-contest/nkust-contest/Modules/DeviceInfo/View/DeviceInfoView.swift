@@ -60,6 +60,9 @@ struct DeviceInfoView: View {
                 voiceEnabled: voiceEnabled
             )
         }
+        .onDisappear {
+            ConnectionStatusAnnouncer.shared.stopReminders(screenID: "device_info")
+        }
     }
 
     private var headerBar: some View {

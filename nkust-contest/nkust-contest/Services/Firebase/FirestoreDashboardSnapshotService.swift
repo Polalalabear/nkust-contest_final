@@ -19,8 +19,14 @@ final class FirestoreDashboardSnapshotService {
         let doc = db.document(documentPath)
         registration = doc.addSnapshotListener { snapshot, error in
             Task { @MainActor in
-                if error != nil {
+                if let error {
                     onUpdate(nil)
+                    self.stopListening()
+                    await SystemIncidentCenter.shared.report(
+                        title: "Firestore 監聽失敗",
+                        details: error.localizedDescription,
+                        isCritical: false
+                    )
                     return
                 }
                 guard let data = snapshot?.data() else {

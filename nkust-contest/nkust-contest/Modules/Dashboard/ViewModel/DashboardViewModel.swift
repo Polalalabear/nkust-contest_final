@@ -1,6 +1,9 @@
 import SwiftUI
 import Observation
 import SwiftData
+import MapKit
+import CoreLocation
+import UIKit
 
 @MainActor
 @Observable
@@ -31,8 +34,60 @@ final class DashboardViewModel {
         isShowingLocation = true
     }
 
-    func showNearestHospital() {
-        isShowingHospital = true
+    func showNearestHospital(appState: AppState) {
+        let sourceCoordinate = CLLocationCoordinate2D(
+            latitude: appState.visUserLatitude,
+            longitude: appState.visUserLongitude
+        )
+        let sourceLocation = CLLocation(latitude: sourceCoordinate.latitude, longitude: sourceCoordinate.longitude)
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = "醫院"
+        request.region = MKCoordinateRegion(
+            center: sourceCoordinate,
+            latitudinalMeters: 8_000,
+            longitudinalMeters: 8_000
+        )
+
+        Task {
+            do {
+                let response = try await MKLocalSearch(request: request).start()
+                let nearest = response.mapItems.min(by: {
+                    let l0 = $0.location ?? CLLocation(latitude: sourceCoordinate.latitude, longitude: sourceCoordinate.longitude)
+                    let l1 = $1.location ?? CLLocation(latitude: sourceCoordinate.latitude, longitude: sourceCoordinate.longitude)
+                    let d0 = l0.distance(from: sourceLocation)
+                    let d1 = l1.distance(from: sourceLocation)
+                    return d0 < d1
+                })
+
+                guard let nearest else {
+                    await SystemIncidentCenter.shared.report(
+                        title: "附近醫院搜尋失敗",
+                        details: "未找到可用醫院結果。",
+                        isCritical: false
+                    )
+                    return
+                }
+
+                let destination = nearest.location.coordinate
+                let lat = destination.latitude
+                let lon = destination.longitude
+                let name = (nearest.name ?? "醫院").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "醫院"
+
+                if let appURL = URL(string: "comgooglemaps://?q=\(name)&center=\(lat),\(lon)&zoom=16"),
+                   UIApplication.shared.canOpenURL(appURL) {
+                    await UIApplication.shared.open(appURL)
+                } else if let webURL = URL(string: "https://www.google.com/maps/search/?api=1&query=\(lat),\(lon)") {
+                    await UIApplication.shared.open(webURL)
+                }
+            } catch {
+                await SystemIncidentCenter.shared.report(
+                    title: "附近醫院搜尋例外",
+                    details: error.localizedDescription,
+                    isCritical: false
+                )
+            }
+        }
     }
 
     /// 依資料來源重新載入；真實模式會啟動 Firestore 監聽並合併 SwiftData

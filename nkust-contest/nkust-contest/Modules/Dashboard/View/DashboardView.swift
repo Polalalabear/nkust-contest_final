@@ -279,11 +279,11 @@ struct SummaryView: View {
             .accessibilityLabel("一鍵取得視障者即時位置")
 
             Button {
-                viewModel.showNearestHospital()
+                viewModel.showNearestHospital(appState: appState)
             } label: {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("最近醫院")
+                        Text("一鍵取得附近醫院")
                             .font(.headline)
                             .fontWeight(.semibold)
                         Text("顯示距離視障者最近的醫院")

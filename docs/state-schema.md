@@ -633,3 +633,36 @@ It is a **machine-readable development log**
 
 **Notes**
 - Live location requires user authorization and the new `NSLocationWhenInUseUsageDescription` Info.plist key
+
+---
+
+### [2026-03-20 14:35]
+
+**Feature**
+- Strengthen disconnected-mode lock: visually-impaired users cannot switch away from Walk while device is disconnected
+- Implement disconnected voice reminders with repeat cycle (immediate once on entry, then every 5 seconds counted after speech finishes)
+- Integrate nearest-hospital action to open Google Maps with auto-selected nearest hospital destination
+- Reduce repeated Firestore error spam by stopping listener and reporting incident on stream errors
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/MainTab/View/MainTabView.swift
+- /nkust-contest/nkust-contest/Services/Feedback/VoiceAnnouncementCenter.swift
+- /nkust-contest/nkust-contest/Services/Feedback/ConnectionStatusAnnouncer.swift
+- /nkust-contest/nkust-contest/Shared/Components/ModeHeaderBar.swift
+- /nkust-contest/nkust-contest/Modules/DeviceInfo/View/DeviceInfoView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /nkust-contest/nkust-contest/Services/Firebase/FirestoreDashboardSnapshotService.swift
+
+**State Changes**
+- MainTab selection binding now blocks non-Walk target pages when `effectiveDeviceConnected == false`
+- Connection announcer now owns per-screen reminder tasks and can start/stop loops by screen lifecycle
+- Voice center now supports awaited speech completion and completion-aware interruption logic
+- Nearest-hospital button now performs MKLocalSearch and launches Google Maps app/web URL directly
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Firestore “API not enabled / permission denied” still requires Firebase Console configuration; app now degrades gracefully and reports incident once per listener start
