@@ -2,7 +2,9 @@ import SwiftUI
 import MapKit
 
 struct LocationMapView: View {
+    @Environment(AppState.self) private var appState
     @State private var position: MapCameraPosition = .automatic
+    @State private var showProfile = false
 
     var body: some View {
         NavigationStack {
@@ -18,10 +20,19 @@ struct LocationMapView: View {
             .navigationTitle("地圖")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Image(systemName: "person.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.primary)
+                    Button {
+                        showProfile = true
+                    } label: {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.primary)
+                    }
+                    .accessibilityLabel("個人資訊")
                 }
+            }
+            .sheet(isPresented: $showProfile) {
+                ProfileSheetView()
+                    .preferredColorScheme(appState.isDarkMode ? .dark : .light)
             }
         }
     }

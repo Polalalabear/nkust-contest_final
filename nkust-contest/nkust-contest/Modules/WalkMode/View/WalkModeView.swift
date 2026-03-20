@@ -37,11 +37,14 @@ struct WalkModeView: View {
             }
         }
         .onAppear {
-            viewModel.syncStreaming(mode: appState.dataSourceMode)
+            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
             viewModel.refreshNavigation(voiceEnabled: isVoiceEnabled)
         }
         .onChange(of: appState.dataSourceMode) { _, mode in
-            viewModel.syncStreaming(mode: mode)
+            viewModel.syncStreaming(mode: mode, isConnected: appState.effectiveDeviceConnected)
+        }
+        .onChange(of: appState.effectiveDeviceConnected) { _, connected in
+            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: connected)
         }
         .onChange(of: isVoiceEnabled) { _, newValue in
             viewModel.refreshNavigation(voiceEnabled: newValue)

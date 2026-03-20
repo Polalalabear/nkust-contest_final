@@ -47,9 +47,9 @@ final class RecognitionModeViewModel {
         isSuccess = !message.isEmpty
     }
 
-    func syncStreaming(mode: DataSourceMode) {
+    func syncStreaming(mode: DataSourceMode, isConnected: Bool) {
         currentMode = mode
-        let shouldUseLiveStream = mode == .live && useDeviceCamera
+        let shouldUseLiveStream = mode == .live && useDeviceCamera && isConnected
         isUsingLiveStream = shouldUseLiveStream
 
         if shouldUseLiveStream {

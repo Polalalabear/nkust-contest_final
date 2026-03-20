@@ -119,6 +119,7 @@ struct SummaryView: View {
             }
             .sheet(isPresented: $showProfile) {
                 ProfileSheetView()
+                    .preferredColorScheme(appState.isDarkMode ? .dark : .light)
             }
             .onAppear {
                 viewModel.syncDataSource(mode: appState.dataSourceMode, appState: appState, modelContext: modelContext)
@@ -510,6 +511,7 @@ struct ProfileSheetView: View {
                 try? AppSettingsPersistence.save(from: appState, context: modelContext)
             }
         }
+        .preferredColorScheme(appState.isDarkMode ? .dark : .light)
     }
 }
 
@@ -558,6 +560,7 @@ struct PreferencesView: View {
         }
         .navigationTitle("設定偏好")
         .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(appState.isDarkMode ? .dark : .light)
         .onDisappear {
             try? AppSettingsPersistence.save(from: appState, context: modelContext)
         }

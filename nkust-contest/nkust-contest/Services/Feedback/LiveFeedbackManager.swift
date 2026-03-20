@@ -6,7 +6,6 @@ import UIKit
 /// 實際語音（AVSpeechSynthesizer）+ 觸覺回饋（CoreHaptics 自訂節奏）。
 @MainActor
 final class LiveFeedbackManager: FeedbackManager {
-    private let synthesizer = AVSpeechSynthesizer()
     private let fallbackNotificationGen = UINotificationFeedbackGenerator()
     private let fallbackLightImpact = UIImpactFeedbackGenerator(style: .light)
     private let fallbackHeavyImpact = UIImpactFeedbackGenerator(style: .heavy)
@@ -52,14 +51,14 @@ final class LiveFeedbackManager: FeedbackManager {
     func setMuted(_ muted: Bool) {
         isMuted = muted
         if muted {
-            synthesizer.stopSpeaking(at: .immediate)
+            VoiceAnnouncementCenter.shared.stopAll()
         }
     }
 
     func triggerSOS() {
         playSOSPattern()
         if !isMuted {
-            speak("緊急求助，已通知照護者")
+            speak("緊急求助，已通知照護者", priority: .sos)
         }
     }
 
@@ -86,11 +85,12 @@ final class LiveFeedbackManager: FeedbackManager {
 
     // MARK: - Speech
 
-    private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "zh-TW")
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.92
-        synthesizer.speak(utterance)
+    private func speak(_ text: String, priority: VoicePriority = .navigation) {
+        VoiceAnnouncementCenter.shared.speak(
+            text,
+            priority: priority,
+            interruptLowerPriority: true
+        )
     }
 
     // MARK: - Haptics（對應 PRD：強震動／短-短／短-長）

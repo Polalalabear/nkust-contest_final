@@ -136,6 +136,23 @@ nkust-contest/nkust-contest/
 2. 每次呼叫會回報 `Gemini 尚未接入` 事件到 `SystemIncidentCenter`，可用於驗證目前仍是 stub 行為。
 3. 後續若接入真 API，請以封包/伺服器 log 驗證有實際外部請求，並將此段更新為正式驗證步驟。
 
+### 4) 語音優先級與內容（Voice Priority）
+
+目前語音統一走 `VoiceAnnouncementCenter`，優先級由高到低如下：
+
+1. `sos`（最高）  
+   - 內容範例：`緊急求助，已通知照護者`
+2. `connectionAlert`  
+   - 內容範例：`裝置目前尚未連線，請檢查 Wi-Fi 連線狀態`
+3. `navigation`  
+   - 內容範例：`紅燈，請在原地停留` / `前方約 X 公尺有障礙，請停止` / `請向左修正路徑` / `請向右修正路徑`
+4. `low`（保留）
+
+規則：
+- 高優先級可中斷低優先級語音。
+- 低優先級不會覆蓋正在播報的高優先級語音。
+- 當使用者靜音時，會立即停止當前播報。
+
 ## 開發流程提醒（給 AI／新進開發者）
 
 1. 開工前閱讀：`docs/architecture.md`、`docs/tech-state.md`、`docs/ui-spec.md`、`docs/device-connection.md`（與串流相關時）。  

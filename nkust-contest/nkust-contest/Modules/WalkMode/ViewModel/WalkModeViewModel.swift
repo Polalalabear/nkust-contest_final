@@ -62,16 +62,16 @@ final class WalkModeViewModel {
         lastDecision = service.evaluateNavigation(context: buildContext(), voiceEnabled: voiceEnabled)
     }
 
-    func syncStreaming(mode: DataSourceMode) {
+    func syncStreaming(mode: DataSourceMode, isConnected: Bool) {
         currentMode = mode
-        let shouldUseLiveStream = mode == .live
+        let shouldUseLiveStream = mode == .live && isConnected
         isUsingLiveStream = shouldUseLiveStream
 
         if shouldUseLiveStream {
             startStreamingIfNeeded()
         } else {
             stopStreaming()
-            connectionStatus = "測試模式（Mock）"
+            connectionStatus = isConnected ? "測試模式（Mock）" : "裝置未連線（可繼續切換模式）"
         }
     }
 

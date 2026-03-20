@@ -569,3 +569,39 @@ It is a **machine-readable development log**
 
 **Notes**
 - Current workspace listing still does not expose `Data/com.apple.CoreML/*` files, so runtime will continue incident fallback until assets are available in app bundle/resources
+
+---
+
+### [2026-03-20 13:35]
+
+**Feature**
+- Fix caregiver map tab profile action (top-right avatar now opens `ProfileSheetView`)
+- Make day/night mode changes immediately reflected in active sheet flows (`ProfileSheetView` and `PreferencesView`)
+- Prevent disconnected device state from blocking visually-impaired mode navigation by gating live stream start on both `live` mode and effective connection
+- Introduce centralized voice arbitration (`VoiceAnnouncementCenter`) and apply priority-based speech handling across navigation/SOS/connection alerts
+- Update README with explicit voice priority rules and sample utterance content
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/LocationMapView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+- /nkust-contest/nkust-contest/Services/Feedback/LiveFeedbackManager.swift
+- /nkust-contest/nkust-contest/Services/Feedback/ConnectionStatusAnnouncer.swift
+- /nkust-contest/nkust-contest/Services/Feedback/VoiceAnnouncementCenter.swift (new)
+- /README.md
+
+**State Changes**
+- LocationMapView now has `showProfile` state and interactive toolbar button
+- Active sheets now bind to app-level color scheme preference in real time
+- Walk/Recognition streaming switch condition expanded to `(dataSourceMode == .live && effectiveDeviceConnected == true)`
+- Voice output now shares one announcer with explicit priorities: `sos > connectionAlert > navigation > low`
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- User requested “track all files then upload”; pending untracked `Sources/` and workspace `xcuserstate` are left for final staging in this task
