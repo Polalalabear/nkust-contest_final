@@ -6,15 +6,16 @@ struct DashboardView: View {
     @Environment(AppState.self) private var appState
 
     @State private var selectedTab: DashboardTab = .summary
+    var onBack: (() -> Void)?
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("主控台", systemImage: "heart.fill", value: .summary) {
-                SummaryView()
+                SummaryView(onBack: onBack)
             }
 
             Tab("定位地圖", systemImage: "map.fill", value: .map) {
-                LocationMapView()
+                LocationMapView(onBack: onBack)
             }
         }
         .preferredColorScheme(appState.isDarkMode ? .dark : .light)
@@ -34,6 +35,7 @@ struct SummaryView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel = DashboardViewModel()
     @State private var showProfile = false
+    var onBack: (() -> Void)?
 
     var body: some View {
         NavigationStack {
@@ -106,6 +108,14 @@ struct SummaryView: View {
             }
             .navigationTitle("照護者主控台")
             .toolbar {
+                if let onBack {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: onBack) {
+                            Image(systemName: "chevron.left")
+                        }
+                        .accessibilityLabel("返回")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showProfile = true

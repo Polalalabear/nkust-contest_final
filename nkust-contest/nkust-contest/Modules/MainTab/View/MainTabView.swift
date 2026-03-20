@@ -33,6 +33,13 @@ struct MainTabView: View {
     }
 
     private func handleCyclicScroll(from oldValue: Int, to newValue: Int) {
+        // 裝置未連線時，僅允許停留在行走模式頁（tag 1）。
+        if !appState.effectiveDeviceConnected, newValue != 1 {
+            selectedPage = 1
+            appState.currentMode = .walkMode
+            return
+        }
+
         if newValue == 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 selectedPage = 3

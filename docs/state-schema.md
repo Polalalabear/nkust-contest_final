@@ -605,3 +605,31 @@ It is a **machine-readable development log**
 
 **Notes**
 - User requested “track all files then upload”; pending untracked `Sources/` and workspace `xcuserstate` are left for final staging in this task
+
+---
+
+### [2026-03-20 14:05]
+
+**Feature**
+- Enforce visually-impaired mode restriction when device is disconnected (block switching to other pages)
+- Add live map integration for caregiver map tab in real-data mode using CoreLocation updates
+- Add dashboard back button on both Summary and Map tabs
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/MainTab/View/MainTabView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/LocationMapView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest.xcodeproj/project.pbxproj
+
+**State Changes**
+- MainTab now forces page back to Walk when `effectiveDeviceConnected == false`
+- Location map now switches behavior by data mode: mock uses fixed coordinate, live requests real location and follows updates
+- Dashboard now supports explicit back navigation to role selector
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Live location requires user authorization and the new `NSLocationWhenInUseUsageDescription` Info.plist key

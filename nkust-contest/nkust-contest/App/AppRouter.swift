@@ -25,7 +25,7 @@ struct AppRouter: View {
                         )
                     }
                 case .caregiver:
-                    DashboardView()
+                    DashboardView(onBack: { appState.userRole = nil })
                 }
             } else {
                 ChooseUserView(isVoiceEnabled: $state.isVoiceEnabled)
