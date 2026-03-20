@@ -68,23 +68,23 @@ final class LiveAIService: AIService {
 enum CoreMLModelRuntimeError: LocalizedError {
     case missingModel(name: String)
     case unsupportedPackageLayout(name: String)
-    case missingModelDirectory(path: String)
+    case missingModelPackage(path: String)
 
     var errorDescription: String? {
         switch self {
         case .missingModel(let name):
             return "找不到模型資源：\(name).mlmodelc / \(name).mlpackage"
         case .unsupportedPackageLayout(let name):
-            return "模型包不完整：\(name).mlpackage 缺少 com.apple.CoreML/model.mlmodel 或 weights"
-        case .missingModelDirectory(let path):
-            return "模型目錄不存在：\(path)"
+            return "模型包不完整：\(name).mlpackage 缺少 Data/com.apple.CoreML/model.mlmodel 或 weights"
+        case .missingModelPackage(let path):
+            return "模型包不存在：\(path)"
         }
     }
 }
 
 final class CoreMLModelRuntime {
     private let localModelName = "yolo26n"
-    private let dataDirectoryRelativePath = "Sources/CoreEngine/Data"
+    private let packageBaseRelativePath = "Sources/CoreEngine"
 
     func predictLocal() async throws -> LocalResult {
         let _ = try resolveModelURL(named: localModelName)
@@ -103,18 +103,16 @@ final class CoreMLModelRuntime {
             return package
         }
 
-        if let dataDirectory = Bundle.main.resourceURL?.appendingPathComponent(dataDirectoryRelativePath) {
-            guard FileManager.default.fileExists(atPath: dataDirectory.path) else {
-                throw CoreMLModelRuntimeError.missingModelDirectory(path: dataDirectory.path)
+        if let package = Bundle.main.resourceURL?
+            .appendingPathComponent(packageBaseRelativePath)
+            .appendingPathComponent("\(name).mlpackage") {
+            guard FileManager.default.fileExists(atPath: package.path) else {
+                throw CoreMLModelRuntimeError.missingModelPackage(path: package.path)
             }
-
-            let package = dataDirectory.appendingPathComponent("\(name).mlpackage")
-            if FileManager.default.fileExists(atPath: package.path) {
-                guard isValidPackageLayout(package) else {
-                    throw CoreMLModelRuntimeError.unsupportedPackageLayout(name: name)
-                }
-                return package
+            guard isValidPackageLayout(package) else {
+                throw CoreMLModelRuntimeError.unsupportedPackageLayout(name: name)
             }
+            return package
         }
 
         throw CoreMLModelRuntimeError.missingModel(name: name)
@@ -122,8 +120,8 @@ final class CoreMLModelRuntime {
 
     private func isValidPackageLayout(_ packageURL: URL) -> Bool {
         let packagePath = packageURL.path
-        let hasSpec = FileManager.default.fileExists(atPath: "\(packagePath)/com.apple.CoreML/model.mlmodel")
-        let hasWeights = FileManager.default.fileExists(atPath: "\(packagePath)/com.apple.CoreML/weights")
+        let hasSpec = FileManager.default.fileExists(atPath: "\(packagePath)/Data/com.apple.CoreML/model.mlmodel")
+        let hasWeights = FileManager.default.fileExists(atPath: "\(packagePath)/Data/com.apple.CoreML/weights")
         return hasSpec && hasWeights
     }
 }

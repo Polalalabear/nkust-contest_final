@@ -548,3 +548,24 @@ It is a **machine-readable development log**
 
 **Notes**
 - Current workspace still does not contain `/Sources/CoreEngine/Data`; app will report incident until model assets are added there
+
+---
+
+### [2026-03-20 13:10]
+
+**Feature**
+- Align CoreML package validation path with user-confirmed structure: `Sources/CoreEngine/<model>.mlpackage/Data/com.apple.CoreML/weights` (model name variable in middle)
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+
+**State Changes**
+- CoreML runtime now validates package internals under `Data/com.apple.CoreML/*` instead of old layout assumptions
+- Missing package incident now reports full expected package path under `Sources/CoreEngine/<model>.mlpackage`
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Current workspace listing still does not expose `Data/com.apple.CoreML/*` files, so runtime will continue incident fallback until assets are available in app bundle/resources
