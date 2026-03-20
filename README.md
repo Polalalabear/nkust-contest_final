@@ -114,6 +114,28 @@ nkust-contest/nkust-contest/
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 
+## 測試指引（ESP32 / CoreML / Gemini）
+
+### 1) ESP32 串流是否正確連線
+
+1. iPhone 先手動連上 `XIAO-S3-CAM`（密碼 `password123`）。
+2. 進入照護者主控台，切到「真實資料」模式（`DataSourceMode.live`）。
+3. 進入視障者 `Walk` 或 `Recognition`，確認狀態有進入串流流程（`連線中` → `串流已連線` / `等待影像中`）。
+4. 若切回「測試資料」模式（`mock`），串流應立即停止（只走 Mock）。
+
+### 2) CoreML 模型是否真的被使用
+
+1. 僅在 `live` 模式下，`Walk` / `Recognition` 會嘗試走 `LiveAIService`。
+2. 若模型載入成功，`Recognition` 會持續更新模型判斷文字；`Walk` 會用模型結果更新障礙狀態。
+3. 若模型缺失或推論失敗，系統會立即上報 `SystemIncidentCenter`（通知名：`systemIncidentReported`，並寫入系統 log）。
+4. 目前 repo 的 `Sources/CoreEngine/*.mlpackage` 若只有 `Manifest.json`（缺 `com.apple.CoreML/model.mlmodel` 與 `weights`），即視為模型包不完整，會觸發上報並 fallback。
+
+### 3) Gemini API 是否真的串上去
+
+1. 現階段 `analyzeCloud` 仍為 stub（尚未發送實際 Gemini 請求）。
+2. 每次呼叫會回報 `Gemini 尚未接入` 事件到 `SystemIncidentCenter`，可用於驗證目前仍是 stub 行為。
+3. 後續若接入真 API，請以封包/伺服器 log 驗證有實際外部請求，並將此段更新為正式驗證步驟。
+
 ## 開發流程提醒（給 AI／新進開發者）
 
 1. 開工前閱讀：`docs/architecture.md`、`docs/tech-state.md`、`docs/ui-spec.md`、`docs/device-connection.md`（與串流相關時）。  

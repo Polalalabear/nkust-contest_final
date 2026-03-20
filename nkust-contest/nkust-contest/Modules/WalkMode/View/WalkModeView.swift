@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct WalkModeView: View {
     @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool

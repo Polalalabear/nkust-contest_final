@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct RecognitionModeView: View {
     @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool

@@ -14,19 +14,28 @@ final class WalkModeViewModel {
     var lastFrameReceivedAt: Date?
 
     private let service: WalkModeServicing
+    private let mockAIService: AIService
+    private let liveAIService: AIService
     private let streamService: StreamService
     private var isStreaming = false
+    private var currentMode: DataSourceMode = .mock
+    private var isAnalyzingFrame = false
 
-    init(service: WalkModeServicing, streamService: StreamService) {
+    init(
+        service: WalkModeServicing,
+        streamService: StreamService,
+        mockAIService: AIService,
+        liveAIService: AIService
+    ) {
         self.service = service
+        self.mockAIService = mockAIService
+        self.liveAIService = liveAIService
         self.streamService = streamService
         self.streamService.onFrame = { [weak self] frame in
             guard let self else { return }
-            if frame != nil {
-                self.lastFrameReceivedAt = Date()
-                self.connectionStatus = "串流已連線"
-            } else if self.isUsingLiveStream {
-                self.connectionStatus = "等待影像中"
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.handleIncomingFrame(frame)
             }
         }
     }
@@ -34,7 +43,9 @@ final class WalkModeViewModel {
     convenience init() {
         self.init(
             service: DefaultWalkModeService(),
-            streamService: StreamServiceFactory.makeDefault()
+            streamService: StreamServiceFactory.makeDefault(),
+            mockAIService: MockAIService(),
+            liveAIService: LiveAIService()
         )
     }
 
@@ -52,6 +63,7 @@ final class WalkModeViewModel {
     }
 
     func syncStreaming(mode: DataSourceMode) {
+        currentMode = mode
         let shouldUseLiveStream = mode == .live
         isUsingLiveStream = shouldUseLiveStream
 
@@ -92,7 +104,34 @@ final class WalkModeViewModel {
         connectionStatus = "連線中"
     }
 
+    private func handleIncomingFrame(_ frame: UIImage?) {
+        guard isUsingLiveStream else { return }
+        guard let frame else {
+            connectionStatus = "等待影像中"
+            return
+        }
+
+        lastFrameReceivedAt = Date()
+        connectionStatus = "串流已連線"
+
+        guard !isAnalyzingFrame else { return }
+        isAnalyzingFrame = true
+
+        Task { [weak self] in
+            guard let self else { return }
+            let ai = self.currentMode == .live ? self.liveAIService : self.mockAIService
+            let result = await ai.analyzeLocal(frame: frame)
+            await MainActor.run {
+                self.obstacle = result.hasObstacle ? .mock : .empty
+                self.isAnalyzingFrame = false
+            }
+        }
+    }
+
     deinit {
-        streamService.stop()
+        let stream = streamService
+        Task { @MainActor in
+            stream.stop()
+        }
     }
 }

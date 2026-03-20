@@ -1,6 +1,7 @@
 import SwiftData
 import SwiftUI
 
+@MainActor
 struct AppRouter: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
@@ -49,11 +50,18 @@ struct AppRouter: View {
     }
 }
 
+@MainActor
+private struct AppRouterPreviewHost: View {
+    var body: some View {
+        AppRouter()
+            .environment(AppState())
+            .modelContainer(
+                for: [PersistedAppSettings.self, PersistedHealthDayRecordEntity.self],
+                inMemory: false
+            )
+    }
+}
+
 #Preview {
-    AppRouter()
-        .environment(AppState())
-        .modelContainer(
-            for: [PersistedAppSettings.self, PersistedHealthDayRecordEntity.self],
-            inMemory: false
-        )
+    AppRouterPreviewHost()
 }

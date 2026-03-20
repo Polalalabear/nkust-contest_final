@@ -11,21 +11,34 @@ final class RecognitionModeViewModel {
     var lastFrameReceivedAt: Date?
 
     private let service: RecognitionModeServicing
+    private let mockAIService: AIService
+    private let liveAIService: AIService
     private let streamService: StreamService
     private var isStreaming = false
+    private var currentMode: DataSourceMode = .mock
+    private var isAnalyzingFrame = false
 
-    init(
-        service: RecognitionModeServicing = StubRecognitionModeService(),
-        streamService: StreamService = StreamServiceFactory.makeDefault()
-    ) {
+    init(service: RecognitionModeServicing, streamService: StreamService, mockAIService: AIService, liveAIService: AIService) {
         self.service = service
+        self.mockAIService = mockAIService
+        self.liveAIService = liveAIService
         self.streamService = streamService
         self.streamService.onFrame = { [weak self] frame in
             guard let self else { return }
-            if frame != nil {
-                self.lastFrameReceivedAt = Date()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.handleIncomingFrame(frame)
             }
         }
+    }
+
+    convenience init() {
+        self.init(
+            service: StubRecognitionModeService(),
+            streamService: StreamServiceFactory.makeDefault(),
+            mockAIService: MockAIService(),
+            liveAIService: LiveAIService()
+        )
     }
 
     func requestRecognition() async {
@@ -35,6 +48,7 @@ final class RecognitionModeViewModel {
     }
 
     func syncStreaming(mode: DataSourceMode) {
+        currentMode = mode
         let shouldUseLiveStream = mode == .live && useDeviceCamera
         isUsingLiveStream = shouldUseLiveStream
 
@@ -57,7 +71,39 @@ final class RecognitionModeViewModel {
         isStreaming = true
     }
 
+    private func handleIncomingFrame(_ frame: UIImage?) {
+        guard isUsingLiveStream else { return }
+        guard let frame else {
+            if resultDescription.isEmpty {
+                resultDescription = "等待串流畫面中"
+            }
+            return
+        }
+
+        lastFrameReceivedAt = Date()
+
+        guard !isAnalyzingFrame else { return }
+        isAnalyzingFrame = true
+
+        Task { [weak self] in
+            guard let self else { return }
+            let ai = self.currentMode == .live ? self.liveAIService : self.mockAIService
+            let local = await ai.analyzeLocal(frame: frame)
+            let cloud = await ai.analyzeCloud(frame: frame)
+            await MainActor.run {
+                self.resultDescription = cloud.summary.isEmpty
+                    ? (local.hasObstacle ? "模型偵測：前方可能有障礙物" : "模型偵測：前方相對安全")
+                    : cloud.summary
+                self.isSuccess = true
+                self.isAnalyzingFrame = false
+            }
+        }
+    }
+
     deinit {
-        streamService.stop()
+        let stream = streamService
+        Task { @MainActor in
+            stream.stop()
+        }
     }
 }

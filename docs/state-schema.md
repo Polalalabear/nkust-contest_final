@@ -492,3 +492,35 @@ It is a **machine-readable development log**
 
 **Notes**
 - Current phase remains mock-first through `StreamServiceFactory` (document rule preserved)
+
+---
+
+### [2026-03-20 12:35]
+
+**Feature**
+- Fix preview/strict-concurrency warnings by isolating `AppRouter` and screen construction on MainActor-safe paths
+- Add `SystemIncidentCenter` for immediate runtime incident reporting (CoreML/Gemini-related failures)
+- Integrate CoreML runtime entry (`LiveAIService`) and wire walk/recognition inference path to run only in `DataSourceMode.live`
+- Update README with explicit testing checklist for ESP32 stream, CoreML usage, and Gemini integration status
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+- /nkust-contest/nkust-contest/Services/System/SystemIncidentCenter.swift (new)
+- /README.md
+
+**State Changes**
+- `WalkModeViewModel` and `RecognitionModeViewModel` now switch stream/AI behavior by `mock/live` mode
+- Live mode attempts real model runtime and reports incidents on missing model/inference failure
+- Gemini cloud path remains stub but now explicitly reports a non-critical incident for observability
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- `Sources/CoreEngine/*.mlpackage` currently appear incomplete (manifest-only) and will trigger model incident fallback until fixed
