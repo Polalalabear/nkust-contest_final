@@ -378,3 +378,49 @@ It is a **machine-readable development log**
 - CoreHaptics custom patterns not yet implemented — TODO in LiveFeedbackManager
 - AI / Stream remain stubs; engine input still from mock UI state until camera+model wired
 - MainActor default isolation: DefaultWalkModeService uses convenience init to construct dependencies
+
+---
+
+### [2026-03-19 19:30]
+
+**Feature**
+- SwiftData: `PersistedAppSettings` (singleton), `PersistedHealthDayRecordEntity` (daily health); `AppSettingsPersistence` + `HealthRecordsPersistence`
+- AppEntry: `.modelContainer(for: [PersistedAppSettings.self, PersistedHealthDayRecordEntity.self], inMemory: false)`
+- AppRouter: bootstrap seed + load settings into AppState on launch
+- Firebase: `FirestoreDashboardSnapshotService` listens to `dashboard/caregiver_primary`; maps to `FirestoreDashboardSnapshot`
+- AppState: `dataSourceMode`, `mockDeviceConnected`, `liveFirestoreSnapshot`, `caregiverDeviceShowsConnected`
+- Dashboard SummaryView: data source segmented control (測試/真實), device status card (已連線/尚未連線), mock connection toggle
+- DashboardViewModel: `syncDataSource`, `chartDetailRecords`, Firestore + SwiftData merge for live mode
+- Profile device section uses caregiver effective connection; Preferences/Profile save to SwiftData
+- AllHealthDataView + HealthDetailView navigation use `viewModel.chartDetailRecords`
+- docs/tech-state.md: Firebase allowed (project-specific); device-connection cross-ref to Firestore
+- docs/device-connection.md: caregiver cloud vs MJPEG boundary
+- README: full SwiftData + Firestore schema tables; workflow + ambiguity notes for user confirmation
+- docs/handoff.md: section 0 (reading docs, restrictions, state-schema, git push, ask user on ambiguity)
+- Version 1.4.0
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/App/AppEntry.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/State/AppState.swift
+- /nkust-contest/nkust-contest/Shared/Models/DataSourceMode.swift (new)
+- /nkust-contest/nkust-contest/Shared/Persistence/* (new)
+- /nkust-contest/nkust-contest/Services/Firebase/* (new)
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/AllHealthDataView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift
+- /README.md, /docs/tech-state.md, /docs/device-connection.md, /docs/handoff.md
+
+**State Changes**
+- SwiftData persists caregiver preferences + optional seeded health days
+- Live mode: Firestore snapshot drives `connected` and optional health fields; upserts today into SwiftData
+- Mock mode: in-memory mock week/three-month charts; `mockDeviceConnected` toggles UI 尚未連線
+
+**Test Coverage**
+- xcodebuild: generic/platform=iOS (unsandboxed)
+- Result: PASS
+
+**Notes**
+- Firestore security rules and document path per pairing are TBD — README lists confirmation questions for product owner
+- MJPEG real device connection still disallowed in current phase per device-connection.md
+- Firebase packages were user-added; this entry documents integration layer only

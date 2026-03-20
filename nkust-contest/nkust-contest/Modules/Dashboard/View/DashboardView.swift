@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import MapKit
 
 struct DashboardView: View {
@@ -29,6 +30,7 @@ enum DashboardTab: Hashable {
 
 struct SummaryView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel = DashboardViewModel()
     @State private var showProfile = false
 
@@ -36,6 +38,9 @@ struct SummaryView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    dataSourceModeSection
+                    deviceStatusCard
+                    mockConnectionToggle
                     actionButtons
                     quickCallButton
 
@@ -44,7 +49,7 @@ struct SummaryView: View {
                     NavigationLink {
                         HealthDetailView(
                             metric: .steps,
-                            records: DailyHealthRecord.mockThreeMonths()
+                            records: viewModel.chartDetailRecords
                         )
                     } label: {
                         healthCard(
@@ -60,7 +65,7 @@ struct SummaryView: View {
                     NavigationLink {
                         HealthDetailView(
                             metric: .distance,
-                            records: DailyHealthRecord.mockThreeMonths()
+                            records: viewModel.chartDetailRecords
                         )
                     } label: {
                         healthCard(
@@ -76,7 +81,7 @@ struct SummaryView: View {
                     NavigationLink {
                         HealthDetailView(
                             metric: .standing,
-                            records: DailyHealthRecord.mockThreeMonths()
+                            records: viewModel.chartDetailRecords
                         )
                     } label: {
                         healthCard(
@@ -90,7 +95,7 @@ struct SummaryView: View {
                     .buttonStyle(.plain)
 
                     NavigationLink {
-                        AllHealthDataView()
+                        AllHealthDataView(seedRecords: viewModel.chartDetailRecords)
                     } label: {
                         allHealthDataLink
                     }
@@ -114,6 +119,97 @@ struct SummaryView: View {
             .sheet(isPresented: $showProfile) {
                 ProfileSheetView()
             }
+            .onAppear {
+                viewModel.syncDataSource(mode: appState.dataSourceMode, appState: appState, modelContext: modelContext)
+            }
+            .onChange(of: appState.dataSourceMode) { _, newMode in
+                viewModel.syncDataSource(mode: newMode, appState: appState, modelContext: modelContext)
+                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+            }
+            .onChange(of: appState.mockDeviceConnected) { _, _ in
+                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+            }
+            .onChange(of: appState.showCharts) { _, _ in
+                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+            }
+            .onChange(of: appState.isDarkMode) { _, _ in
+                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+            }
+            .onChange(of: appState.preferredChartStyle) { _, _ in
+                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+            }
+        }
+    }
+
+    // MARK: - Data source & device
+
+    private var dataSourceModeSection: some View {
+        @Bindable var state = appState
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("資料來源")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Picker("資料來源", selection: $state.dataSourceMode) {
+                ForEach(DataSourceMode.allCases) { mode in
+                    Text(mode.displayTitle).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            Text(appState.dataSourceMode == .mock
+                 ? "使用記憶體假資料，可模擬斷線。"
+                 : "Firestore 即時快照 + SwiftData 本地快取（見 README 欄位契約）。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.regularMaterial)
+        )
+    }
+
+    private var deviceStatusCard: some View {
+        HStack(spacing: 14) {
+            Image(systemName: appState.caregiverDeviceShowsConnected ? "antenna.radiowaves.left.and.right" : "wifi.slash")
+                .font(.title)
+                .foregroundStyle(appState.caregiverDeviceShowsConnected ? .green : .orange)
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle()
+                        .fill(appState.caregiverDeviceShowsConnected ? .green.opacity(0.15) : .orange.opacity(0.15))
+                )
+            VStack(alignment: .leading, spacing: 4) {
+                Text("裝置狀態")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(appState.caregiverDeviceShowsConnected ? "已連線" : "尚未連線")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                if appState.caregiverDeviceShowsConnected {
+                    Text("裝置電量 \(appState.deviceBattery) %")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.regularMaterial)
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var mockConnectionToggle: some View {
+        if appState.dataSourceMode == .mock {
+            @Bindable var state = appState
+            Toggle(isOn: $state.mockDeviceConnected) {
+                Label("模擬裝置已連線", systemImage: "link")
+            }
+            .padding(.horizontal, 4)
         }
     }
 
@@ -294,6 +390,7 @@ struct SummaryView: View {
 
 struct ProfileSheetView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var isEditing = false
     @State private var showPreferences = false
@@ -363,8 +460,11 @@ struct ProfileSheetView: View {
                 }
 
                 Section("裝置資訊") {
-                    LabeledContent("裝置連線", value: appState.deviceConnected ? "已連接" : "未連接")
-                    LabeledContent("裝置電量", value: "\(appState.deviceBattery) %")
+                    LabeledContent("資料來源", value: appState.dataSourceMode.displayTitle)
+                    LabeledContent("裝置連線", value: appState.caregiverDeviceShowsConnected ? "已連線" : "尚未連線")
+                    if appState.caregiverDeviceShowsConnected {
+                        LabeledContent("裝置電量", value: "\(appState.deviceBattery) %")
+                    }
                     LabeledContent("手機電量", value: "\(appState.phoneBattery) %")
                     LabeledContent("定位分享", value: appState.isLocationSharing ? "開啟" : "關閉")
                 }
@@ -399,8 +499,14 @@ struct ProfileSheetView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("關閉") { dismiss() }
+                    Button("關閉") {
+                        try? AppSettingsPersistence.save(from: appState, context: modelContext)
+                        dismiss()
+                    }
                 }
+            }
+            .onDisappear {
+                try? AppSettingsPersistence.save(from: appState, context: modelContext)
             }
         }
     }
@@ -410,6 +516,7 @@ struct ProfileSheetView: View {
 
 struct PreferencesView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         @Bindable var state = appState
@@ -450,10 +557,17 @@ struct PreferencesView: View {
         }
         .navigationTitle("設定偏好")
         .navigationBarTitleDisplayMode(.inline)
+        .onDisappear {
+            try? AppSettingsPersistence.save(from: appState, context: modelContext)
+        }
     }
 }
 
 #Preview {
     DashboardView()
         .environment(AppState())
+        .modelContainer(
+            for: [PersistedAppSettings.self, PersistedHealthDayRecordEntity.self],
+            inMemory: false
+        )
 }

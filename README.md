@@ -6,10 +6,10 @@
 
 | 模組 | 說明 | 狀態 |
 |---|---|---|
-| 行走模式 (Walk Mode) | 即時障礙偵測 + 方向指引 + 號誌辨識 | UI 完成，引擎 Stub |
+| 行走模式 (Walk Mode) | 即時障礙偵測 + 方向指引 + 號誌辨識 | UI 完成；DefaultDecisionEngine + LiveFeedbackManager 已接 |
 | 辨識模式 (Recognition Mode) | 物品辨識 + AI 描述 | UI 完成，AI Stub |
 | 長照模式 (LTC Mode) | 位置分享 + 緊急通話 | UI 完成，通話 Stub |
-| 照護者儀表板 (Dashboard) | 健康數據 + 即時定位地圖 | UI 完成，資料 Stub |
+| 照護者儀表板 (Dashboard) | 健康數據 + 裝置狀態 + 測試/真實資料切換 + 地圖 | SwiftData + Firestore 快照已接 |
 
 ## 架構
 
@@ -18,68 +18,107 @@ MVVM + 嚴格分層
 View → ViewModel → Service → Engine
 ```
 
-- **View**: SwiftUI，僅負責 UI 呈現
-- **ViewModel**: @Observable 狀態管理
-- **Service**: 外部互動抽象（全部為 Stub）
-- **Engine**: 純邏輯（DecisionEngine / FeedbackManager）
+- **View**: SwiftUI，僅負責 UI 呈現  
+- **ViewModel**: @Observable 狀態管理  
+- **Service**: 外部互動（部分已接 Firebase / 本地持久化）  
+- **Engine**: 純邏輯（DecisionEngine 等）
 
 ## 技術棧
 
-- SwiftUI (iOS 26)
-- @Observable (Swift Macro)
-- Swift Charts
-- SF Symbols
-- MapKit
-- MVVM 架構
+- SwiftUI (iOS 26)、@Observable、Swift Charts、SF Symbols、MapKit  
+- **SwiftData**（本地設定 + 健康日資料快取）  
+- **Firebase**（SPM：`FirebaseCore`、Firestore、Auth、Analytics、AI 等 — 以專案已連結為準）  
+- MVVM  
 
-## 專案結構
+詳見 `/docs/tech-state.md`（含 Firebase 專案例外與 MJPEG 限制）。
+
+## 資料結構契約
+
+### SwiftData（`Shared/Persistence/LocalSwiftDataModels.swift`）
+
+| 模型 | 說明 | 主要欄位 |
+|---|---|---|
+| `PersistedAppSettings` | 全 app 單例設定列（`singletonId == "app_settings_singleton"`） | `dataSourceModeRaw`（`mock` / `live`）、`mockDeviceConnected`、`showCharts`、`isDarkMode`、`preferredChartStyleRaw`（對應 `ChartStyle.rawValue`）、`caregiverName`、`caregiverRelationship`、`caregiverEmergencyPhone` |
+| `PersistedHealthDayRecordEntity` | 每日健康一筆（本地快取／真實模式合併） | `dayStart`（當日 00:00，**unique**）、`steps`、`distanceKm`、`standingMinutes` |
+
+**持久化輔助**：`AppSettingsPersistence`、`HealthRecordsPersistence`（`seedIfEmpty` 首次寫入 mock 三個月列）。
+
+### Firebase Firestore（照護者「真實資料」）
+
+**文件路徑**（常數：`FirestoreDashboardPaths.caregiverPrimaryDocument`）：
+
+`dashboard/caregiver_primary`
+
+| 欄位 | 型別（概念） | 說明 |
+|---|---|---|
+| `connected` | bool | `true` 時主控台顯示「已連線」 |
+| `deviceBattery` | int | 0–100 |
+| `phoneBattery` | int（可選） | 同步至 `AppState.phoneBattery` |
+| `isLocationSharing` | bool（可選） | 同步至 `AppState.isLocationSharing` |
+| `steps` | int（可選） | 當日步數；寫入 SwiftData「今日」列並刷新圖表 |
+| `distanceKm` | double（可選） | 當日距離（公里） |
+| `standingMinutes` | int（可選） | 當日站立分鐘 |
+
+監聽實作：`FirestoreDashboardSnapshotService`（失敗或無文件時不 crash，`liveFirestoreSnapshot` 為 `nil` → UI 顯示「尚未連線」）。
+
+### 照護者資料來源模式（`DataSourceMode`）
+
+| 模式 | 行為 |
+|---|---|
+| `mock`（測試資料） | 健康曲線為記憶體假資料；可開關「模擬裝置已連線」 |
+| `live`（真實資料） | Firestore 監聽 + SwiftData 讀寫合併；未連上或 `connected == false` → **尚未連線** |
+
+### 與 ESP32 相機串流（必讀）
+
+`/docs/device-connection.md`：**開發階段仍使用 MockStreamService**，不可直接連 `http://192.168.4.1/stream`，直到專案進入下一階段。Firestore 與 MJPEG 為不同資料路徑。
+
+---
+
+## 疑慮與建議由產品／使用者確認事項
+
+1. **Firestore 文件路徑**是否長期固定為 `dashboard/caregiver_primary`，或需改為每使用者／每配對一文件？若變更請同步改 `FirestoreDashboardPaths` 與本 README。  
+2. **安全規則**：目前假設客戶端可讀該文件；正式環境是否改為 Auth uid 綁定 collection？  
+3. **「真實資料」健康歷史**：目前以 SwiftData 快取 + Firestore 當日欄位為主；若需「僅雲端、不落地」或「完整 90 天全在 Firestore」請另定契約。  
+
+---
+
+## 專案結構（精簡）
 
 ```
 nkust-contest/nkust-contest/
-├── App/            # AppEntry + AppRouter
-├── State/          # AppState (@Observable)
+├── App/
+├── State/                 # AppState
 ├── Shared/
-│   ├── Models/     # AppMode, DecisionModels
-│   └── Components/ # VoiceToggle, ModeHeader, OverlayCard, SwipeHint, HealthChart
-├── Modules/
-│   ├── ChooseUser/ # 身份選擇
-│   ├── DeviceInfo/ # 裝置資訊
-│   ├── MainTab/    # 頁面滑動容器
-│   ├── WalkMode/   # 行走模式 (View/ViewModel/Service/Engine)
-│   ├── RecognitionMode/ # 辨識模式
-│   ├── LTCMode/    # 長照模式
-│   └── Dashboard/  # 照護者儀表板 + 地圖
-├── Services/       # AI / Stream / Feedback (Stub)
-└── Core/Engine/    # DecisionEngine / FeedbackManager
+│   ├── Models/
+│   ├── Components/
+│   └── Persistence/       # SwiftData 模型 + Persistence helpers
+├── Modules/               # Walk / Recognition / LTC / Dashboard …
+├── Services/
+│   ├── Firebase/          # FirestoreDashboardSnapshotService
+│   ├── AI / Stream / Feedback …
+└── Core/Engine/
 ```
 
 ## 開發狀態
 
-> 最後更新：2026-03-19
+> 最後更新：2026-03-19 · App 版本見 `AppState.appVersion`（目前 **v1.4.0**）
 
-- [x] MVVM 骨架建立
-- [x] 全畫面 UI 實作（依照設計稿）
-- [x] @Observable 遷移
-- [x] SF Symbols 全面採用
-- [x] 頁面循環滑動
-- [x] 照護者個人資訊頁面 + 登出
-- [x] 健康數據詳細頁面（步數/距離/站立分鐘 + 期間篩選 + 排序）
-- [x] 月曆式全部健康資料頁面（日期點擊詳細 + 期間平均）
-- [x] 交接文件 (handoff.md)
-- [x] 一鍵取得即時位置 + 最近醫院按鈕
-- [x] 照護者個人資料可編輯（姓名/關係/緊急電話）
-- [x] 健康圖表（長條圖/折線圖/圓餅圖切換）
-- [x] 版本號更新至 v1.1.0
-- [x] 圖表顯示開關 toggle + 圖表樣式移至設定偏好
-- [x] 日期格式統一為 M/d (e.g. 3/15)
-- [x] 設定偏好（日間/夜間模式、圖表樣式選擇含預覽）
-- [x] 匯出 CSV 按鈕（stub，可選擇時間範圍）
-- [x] 版本號更新至 v1.2.0
-- [x] DecisionEngine 實作（DefaultDecisionEngine：距離／紅燈規則）
-- [x] FeedbackManager 實作（LiveFeedbackManager：AVSpeech + UIKit Haptics；CoreHaptics 進階 TODO）
-- [x] WalkMode 串接 evaluateNavigation + 進入畫面／語音開關觸發回饋
-- [x] 版本號更新至 v1.3.0
-- [ ] CoreHaptics 自訂節奏（對齊 PRD 短-短／短-長）
-- [ ] AI Service 接入（CoreML / Gemini）
-- [ ] MJPEG Stream 接入
-- [ ] 真實定位整合
+- [x] Firebase 初始化（`AppDelegate` + `GoogleService-Info.plist`）  
+- [x] SwiftData 容器 + 設定／健康日模型  
+- [x] 照護者：裝置狀態列、測試/真實資料切換、Firestore 監聽  
+- [x] DecisionEngine / LiveFeedbackManager / WalkMode 串接  
+- [ ] CoreHaptics 自訂節奏  
+- [ ] MJPEG 真實串流（須符合 `device-connection.md` 階段規則）  
+- [ ] CSV 實際匯出  
+- [ ] Firebase Auth 與欄位級安全規則落地  
+
+## 開發流程提醒（給 AI／新進開發者）
+
+1. 開工前閱讀：`docs/architecture.md`、`docs/tech-state.md`、`docs/ui-spec.md`、`docs/device-connection.md`（與串流相關時）。  
+2. **不可**在未更新 `docs/tech-state.md` / README 的情況下新增技術依賴。  
+3. 每次可交付改動後：**append** `docs/state-schema.md`、更新 README 重點（若適用）、**git commit** 並依團隊流程 **push**。  
+4. 若需求與架構／技術清單衝突：**先向使用者確認**再實作。  
+
+---
+
+GitHub: `Polalalabear/nkust-contest_final`

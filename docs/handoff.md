@@ -6,6 +6,24 @@
 
 ---
 
+## 0. 開發流程與使用者要求（每次對話／任務結束前檢查）
+
+以下為本專案與使用者約定之工作方式，**下一任 AI 或開發者請務必遵守**：
+
+| 項目 | 要求 |
+|---|---|
+| **閱讀文件** | 實作前必讀：`architecture.md`、`tech-state.md`、`ui-spec.md`、`prd.md`、`state-schema.md`；涉及相機/ESP32 串流時必讀 **`device-connection.md`** |
+| **架構限制** | 嚴守 MVVM 分層；Engine 純邏輯；相機輸入僅能經 `StreamService`；現階段串流用 **Mock**（見 device-connection） |
+| **技術限制** | 不可自行引入未列入 `tech-state.md` 的技術；本專案已核准 **Firebase + SwiftData**，以 README 契約為準 |
+| **疑慮處理** | 若需求與文件定義、資料範圍、Firestore 路徑等有歧義，**先向使用者確認**再改程式 |
+| **狀態日誌** | 每次可驗證的實作完成後 **append** `docs/state-schema.md`（禁止覆寫歷史） |
+| **README** | 資料契約、技術棧、流程有變時同步更新 `README.md` |
+| **本交接文件** | 架構/流程/待辦變動時更新 `docs/handoff.md` |
+| **版本號** | 依使用者要求，重大功能迭代時更新 `AppState.appVersion` |
+| **Git** | 小步提交、訊息建議 `core:` / `ui:` / `model:` / `infra:`；完成後 **`git push`** 至約定遠端（若使用者有要求） |
+
+---
+
 ## 1. 專案簡介
 
 **視障輔助導航系統** — 即時視覺輔助導航決策系統，將攝影機畫面轉換為行動指令（停止 / 左移 / 右移 / 安全），協助視障者安全行走。
@@ -28,7 +46,8 @@
 | 產品需求 | `/docs/prd.md` | 產品概念、功能、非目標 |
 | 架構規範 | `/docs/architecture.md` | MVVM 分層、嚴格規則、資料流 |
 | UI 規格 | `/docs/ui-spec.md` | 畫面設計、互動規格 |
-| 技術棧 | `/docs/tech-state.md` | 允許使用的技術（不可自行新增） |
+| 技術棧 | `/docs/tech-state.md` | 允許使用的技術；**本專案含 Firebase + SwiftData 例外註記** |
+| 裝置與串流 | `/docs/device-connection.md` | ESP32 MJPEG、URLSession、現階段 Mock 規則 |
 | 狀態日誌 | `/docs/state-schema.md` | 機器可讀開發日誌（每次改動需 append） |
 | 模型角色 | `/.cursor/rules/model-roles.md` | AI 模型的角色限制 |
 | UI 角色 | `/.cursor/rules/ui-roles.md` | UI 開發的角色限制 |
@@ -75,8 +94,13 @@ nkust-contest/nkust-contest/
 ├── Shared/
 │   ├── Models/
 │   │   ├── AppMode.swift       # UserRole + AppMode 列舉
+│   │   ├── DataSourceMode.swift # mock / live（照護者資料來源）
 │   │   ├── DecisionModels.swift # 障礙物/方向/號誌/聯絡人模型
 │   │   └── HealthModels.swift  # 健康紀錄 + 指標 + 期間 + 排序 + ChartStyle
+│   ├── Persistence/
+│   │   ├── LocalSwiftDataModels.swift # PersistedAppSettings, PersistedHealthDayRecordEntity
+│   │   ├── AppSettingsPersistence.swift
+│   │   └── HealthRecordsPersistence.swift
 │   └── Components/
 │       ├── CameraPreviewPlaceholder.swift
 │       ├── HealthChartView.swift   # 可切換長條圖/折線圖/圓餅圖（Swift Charts）
@@ -101,9 +125,13 @@ nkust-contest/nkust-contest/
 │       ├── Service/DashboardService.swift
 │       └── Engine/DashboardEngine.swift
 ├── Services/
+│   ├── Firebase/
+│   │   ├── FirestoreDashboardSnapshot.swift
+│   │   └── FirestoreDashboardSnapshotService.swift
 │   ├── AI/AIService.swift              # Stub — TODO: CoreML / Gemini
-│   ├── Stream/StreamService.swift      # Stub — TODO: MJPEG
-│   └── Feedback/FeedbackService.swift  # Stub — TODO: CoreHaptics + TTS
+│   ├── Stream/StreamService.swift      # Stub — TODO: MJPEG（須遵守 device-connection.md）
+│   ├── Feedback/FeedbackService.swift
+│   └── Feedback/LiveFeedbackManager.swift
 └── Core/Engine/
     ├── DecisionEngine.swift    # 核心決策引擎 (Stub — TODO: 實作)
     └── FeedbackManager.swift   # 回饋管理器 (Stub — TODO: 實作)
@@ -161,7 +189,11 @@ ChooseUserView
 - [x] 日期格式統一 M/d（e.g. 3/15）
 - [x] 匯出 CSV 按鈕（AllHealthDataView 底部，stub，可選時間範圍）
 - [x] DefaultDecisionEngine + LiveFeedbackManager + DefaultWalkModeService 行走模式串接
-- [x] 版本 v1.3.0
+- [x] 版本 v1.3.0 → **v1.4.0**（SwiftData + Firestore 照護者資料模式）
+- [x] Firebase（`FirebaseApp.configure()` + SPM 套件）+ `GoogleService-Info.plist`
+- [x] SwiftData：`PersistedAppSettings`、`PersistedHealthDayRecordEntity` + 啟動載入/儲存
+- [x] 照護者主控台：裝置狀態（已連線／**尚未連線**）、測試資料／真實資料切換
+- [x] `FirestoreDashboardSnapshotService` 監聽 `dashboard/caregiver_primary`
 - [x] `#Preview` 加入所有 View 檔案
 - [x] README.md + .gitignore
 

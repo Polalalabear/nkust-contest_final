@@ -6,6 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		10851B412F6CECC200B7C437 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 10851B402F6CECC200B7C437 /* FirebaseAI */; };
+		10851B432F6CECC200B7C437 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = 10851B422F6CECC200B7C437 /* FirebaseAILogic */; };
+		10851B452F6CECC200B7C437 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 10851B442F6CECC200B7C437 /* FirebaseAnalytics */; };
+		10851B472F6CECC200B7C437 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 10851B462F6CECC200B7C437 /* FirebaseAnalyticsCore */; };
+		10851B492F6CECC200B7C437 /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = 10851B482F6CECC200B7C437 /* FirebaseAnalyticsIdentitySupport */; };
+		10851B4B2F6CECC200B7C437 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 10851B4A2F6CECC200B7C437 /* FirebaseAuth */; };
+		10851B4D2F6CECC200B7C437 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 10851B4C2F6CECC200B7C437 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		103CB9012F6BCFEF006DB466 /* nkust-contest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "nkust-contest.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +33,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				10851B432F6CECC200B7C437 /* FirebaseAILogic in Frameworks */,
+				10851B4B2F6CECC200B7C437 /* FirebaseAuth in Frameworks */,
+				10851B492F6CECC200B7C437 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				10851B412F6CECC200B7C437 /* FirebaseAI in Frameworks */,
+				10851B452F6CECC200B7C437 /* FirebaseAnalytics in Frameworks */,
+				10851B472F6CECC200B7C437 /* FirebaseAnalyticsCore in Frameworks */,
+				10851B4D2F6CECC200B7C437 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +82,13 @@
 			);
 			name = "nkust-contest";
 			packageProductDependencies = (
+				10851B402F6CECC200B7C437 /* FirebaseAI */,
+				10851B422F6CECC200B7C437 /* FirebaseAILogic */,
+				10851B442F6CECC200B7C437 /* FirebaseAnalytics */,
+				10851B462F6CECC200B7C437 /* FirebaseAnalyticsCore */,
+				10851B482F6CECC200B7C437 /* FirebaseAnalyticsIdentitySupport */,
+				10851B4A2F6CECC200B7C437 /* FirebaseAuth */,
+				10851B4C2F6CECC200B7C437 /* FirebaseFirestore */,
 			);
 			productName = "nkust-contest";
 			productReference = 103CB9012F6BCFEF006DB466 /* nkust-contest.app */;
@@ -94,6 +118,9 @@
 			);
 			mainGroup = 103CB8F82F6BCFEF006DB466;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 103CB9022F6BCFEF006DB466 /* Products */;
 			projectDirPath = "";
@@ -332,6 +359,55 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		10851B402F6CECC200B7C437 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		10851B422F6CECC200B7C437 /* FirebaseAILogic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAILogic;
+		};
+		10851B442F6CECC200B7C437 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		10851B462F6CECC200B7C437 /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		10851B482F6CECC200B7C437 /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+		10851B4A2F6CECC200B7C437 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		10851B4C2F6CECC200B7C437 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10851B3F2F6CECC200B7C437 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 103CB8F92F6BCFEF006DB466 /* Project object */;
 }

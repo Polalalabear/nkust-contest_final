@@ -4,7 +4,13 @@ import Charts
 struct AllHealthDataView: View {
     @Environment(AppState.self) private var appState
 
-    @State private var records = DailyHealthRecord.mockThreeMonths()
+    private let seedRecords: [DailyHealthRecord]
+    @State private var records: [DailyHealthRecord]
+
+    init(seedRecords: [DailyHealthRecord] = DailyHealthRecord.mockThreeMonths()) {
+        self.seedRecords = seedRecords
+        _records = State(initialValue: seedRecords)
+    }
     @State private var selectedDate: Date? = nil
     @State private var displayedMonth: Date = Date()
     @State private var selectedPeriod: HealthPeriod = .month
