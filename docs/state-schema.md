@@ -424,3 +424,71 @@ It is a **machine-readable development log**
 - Firestore security rules and document path per pairing are TBD — README lists confirmation questions for product owner
 - MJPEG real device connection still disallowed in current phase per device-connection.md
 - Firebase packages were user-added; this entry documents integration layer only
+
+---
+
+### [2026-03-20 11:35]
+
+**Feature**
+- Extend visually impaired UI to follow unified data-source connection state (`mock` / `live`) via `AppState.effectiveDeviceConnected`
+- Add spoken warning when device status is shown as disconnected (DeviceInfo and mode headers)
+- Replace UIKit haptic combos with CoreHaptics custom patterns in `LiveFeedbackManager` (strong stop, short-short left, short-long right)
+- Implement real MJPEG stream path (`MJPEGStreamService`) with URLSession + manual JPEG extraction while keeping current phase default on `MockStreamService`
+- Update `.gitignore` for local tooling/build artifacts/secrets and sync README status
+
+**Modules Affected**
+- /.gitignore
+- /README.md
+- /nkust-contest/nkust-contest/State/AppState.swift
+- /nkust-contest/nkust-contest/Shared/Components/ModeHeaderBar.swift
+- /nkust-contest/nkust-contest/Modules/DeviceInfo/View/DeviceInfoView.swift
+- /nkust-contest/nkust-contest/Services/Feedback/LiveFeedbackManager.swift
+- /nkust-contest/nkust-contest/Services/Feedback/ConnectionStatusAnnouncer.swift (new)
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+
+**State Changes**
+- Added app-wide computed connection state (`effectiveDeviceConnected`) shared by caregiver and visually impaired flows
+- Added connection status voice announcement service to avoid repeated disconnected prompts
+- Added CoreHaptics engine-based playback path with UIKit fallback for unsupported/failure cases
+- Added stream phase gate (`StreamDevelopmentPhase`) and default factory to enforce mock-only behavior in current stage
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- `MJPEGStreamService` is implemented but not default-enabled until phase changes to `realDeviceAllowed`
+- Stream failure follows doc rule: emit `nil` frame, no crash, no aggressive retries
+
+---
+
+### [2026-03-20 12:05]
+
+**Feature**
+- Resolve strict-concurrency warnings (MainActor init call, actor-isolated static access, immutable fetch descriptors)
+- Wire Walk/Recognition stream lifecycle and make stream enable/disable controlled by caregiver data mode (`mock/live`)
+- Keep phase constraint intact: even in live mode, actual stream implementation still respects `StreamDevelopmentPhase.current`
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift
+- /nkust-contest/nkust-contest/Services/Firebase/FirestoreDashboardSnapshotService.swift
+- /nkust-contest/nkust-contest/Services/Firebase/FirestoreDashboardSnapshot.swift
+- /nkust-contest/nkust-contest/Shared/Persistence/HealthRecordsPersistence.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+
+**State Changes**
+- `SummaryView` pinned to MainActor to avoid nonisolated init warning
+- Firestore listener API now requires explicit path parameter; path constant marked nonisolated
+- Walk/Recognition ViewModel now manage `StreamService` start/stop by `DataSourceMode`
+- Live mode triggers stream start; mock mode forces stream stop
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Current phase remains mock-first through `StreamServiceFactory` (document rule preserved)

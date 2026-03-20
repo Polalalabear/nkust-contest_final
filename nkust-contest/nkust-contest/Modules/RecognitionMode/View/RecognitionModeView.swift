@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RecognitionModeView: View {
+    @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool
     var onBack: (() -> Void)?
     @State private var viewModel = RecognitionModeViewModel()
@@ -36,6 +37,18 @@ struct RecognitionModeView: View {
                 )
                 .padding(.bottom, 40)
             }
+        }
+        .onAppear {
+            viewModel.syncStreaming(mode: appState.dataSourceMode)
+        }
+        .onChange(of: appState.dataSourceMode) { _, mode in
+            viewModel.syncStreaming(mode: mode)
+        }
+        .onChange(of: viewModel.useDeviceCamera) { _, _ in
+            viewModel.syncStreaming(mode: appState.dataSourceMode)
+        }
+        .onDisappear {
+            viewModel.stopStreaming()
         }
     }
 

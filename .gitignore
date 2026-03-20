@@ -22,3 +22,19 @@ Package.resolved
 
 # Build artifacts
 build/
+
+# Xcode generated outputs (nested projects)
+**/DerivedData/
+**/.build/
+**/build/
+
+# Tooling
+.cursor/
+.vscode/
+
+# Local secrets / env
+.env
+.env.*
+*.p12
+*.mobileprovision
+GoogleService-Info.plist

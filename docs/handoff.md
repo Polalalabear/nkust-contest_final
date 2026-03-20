@@ -1,6 +1,6 @@
 # 交接文件 (Handoff Document)
 
-> 最後更新：2026-03-19
+> 最後更新：2026-03-20
 
 本文件旨在讓下一位開發者/AI 快速理解專案全貌、目前進度與待辦事項。
 
@@ -196,14 +196,16 @@ ChooseUserView
 - [x] `FirestoreDashboardSnapshotService` 監聽 `dashboard/caregiver_primary`
 - [x] `#Preview` 加入所有 View 檔案
 - [x] README.md + .gitignore
+- [x] CoreHaptics 自訂節奏（強停／短-短／短-長）已接入 `LiveFeedbackManager`（含 UIKit fallback）
+- [x] 視障者 UI（DeviceInfo + ModeHeader）吃 `mock/live` 同步連線狀態，未連線時語音告知使用者
+- [x] `MJPEGStreamService`（URLSession + 手動 JPEG 解析）已完成，預設仍依階段規則使用 Mock
 
 ### ❌ 待完成（依優先順序）
 
 | 優先級 | 任務 | 說明 |
 |---|---|---|
-| 🟡 P1 | CoreHaptics 精準節奏 | 取代 UIKit haptics，對齊 PRD 短-短／短-長／強停 |
 | 🟡 P1 | AI Service 接入 | CoreML 或 Gemini API 整合 |
-| 🟡 P1 | MJPEG Stream 接入 | URLSession 串流影像 |
+| 🟡 P1 | MJPEG 真機啟用切換 | `MJPEGStreamService` 已完成；待專案進入下一階段時將 `StreamDevelopmentPhase` 改為 `realDeviceAllowed` |
 | 🟡 P1 | 真實攝影機整合 | AVFoundation 替換 CameraPreviewPlaceholder |
 | 🟡 P1 | 真實定位整合 | CoreLocation 替換靜態座標 |
 | 🟡 P1 | CSV 匯出實作 | ShareLink / UIActivityViewController 實際匯出 |

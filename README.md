@@ -68,6 +68,8 @@ View → ViewModel → Service → Engine
 | `mock`（測試資料） | 健康曲線為記憶體假資料；可開關「模擬裝置已連線」 |
 | `live`（真實資料） | Firestore 監聽 + SwiftData 讀寫合併；未連上或 `connected == false` → **尚未連線** |
 
+> `AppState.effectiveDeviceConnected` 已同時提供給照護者與視障者 UI（如 DeviceInfo / Walk / Recognition / LTC 狀態列）使用。
+
 ### 與 ESP32 相機串流（必讀）
 
 `/docs/device-connection.md`：**開發階段仍使用 MockStreamService**，不可直接連 `http://192.168.4.1/stream`，直到專案進入下一階段。Firestore 與 MJPEG 為不同資料路徑。
@@ -101,14 +103,14 @@ nkust-contest/nkust-contest/
 
 ## 開發狀態
 
-> 最後更新：2026-03-19 · App 版本見 `AppState.appVersion`（目前 **v1.4.0**）
+> 最後更新：2026-03-20 · App 版本見 `AppState.appVersion`（目前 **v1.4.0**）
 
 - [x] Firebase 初始化（`AppDelegate` + `GoogleService-Info.plist`）  
 - [x] SwiftData 容器 + 設定／健康日模型  
 - [x] 照護者：裝置狀態列、測試/真實資料切換、Firestore 監聽  
 - [x] DecisionEngine / LiveFeedbackManager / WalkMode 串接  
-- [ ] CoreHaptics 自訂節奏  
-- [ ] MJPEG 真實串流（須符合 `device-connection.md` 階段規則）  
+- [x] CoreHaptics 自訂節奏（LiveFeedbackManager：強停 / 短短 / 短長）  
+- [x] MJPEG 真實串流服務（`MJPEGStreamService`，URLSession + 手動 JPEG 解析；預設仍遵守階段規則使用 Mock）  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 

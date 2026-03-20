@@ -8,7 +8,7 @@ enum HealthRecordsPersistence {
         let today = cal.startOfDay(for: Date())
         guard let start = cal.date(byAdding: .day, value: -(days - 1), to: today) else { return [] }
 
-        var desc = FetchDescriptor<PersistedHealthDayRecordEntity>(
+        let desc = FetchDescriptor<PersistedHealthDayRecordEntity>(
             sortBy: [SortDescriptor(\.dayStart, order: .reverse)]
         )
         let rows = try context.fetch(desc)
@@ -32,7 +32,7 @@ enum HealthRecordsPersistence {
     ) throws {
         let cal = Calendar.current
         let day = cal.startOfDay(for: Date())
-        var desc = FetchDescriptor<PersistedHealthDayRecordEntity>(
+        let desc = FetchDescriptor<PersistedHealthDayRecordEntity>(
             sortBy: [SortDescriptor(\.dayStart, order: .reverse)]
         )
         let rows = try context.fetch(desc)

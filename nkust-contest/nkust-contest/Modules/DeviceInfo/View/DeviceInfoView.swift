@@ -39,6 +39,27 @@ struct DeviceInfoView: View {
         .onTapGesture {
             onStart()
         }
+        .onAppear {
+            ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
+                screenID: "device_info",
+                isConnected: appState.effectiveDeviceConnected,
+                voiceEnabled: isVoiceEnabled
+            )
+        }
+        .onChange(of: appState.effectiveDeviceConnected) { _, connected in
+            ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
+                screenID: "device_info",
+                isConnected: connected,
+                voiceEnabled: isVoiceEnabled
+            )
+        }
+        .onChange(of: isVoiceEnabled) { _, voiceEnabled in
+            ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
+                screenID: "device_info",
+                isConnected: appState.effectiveDeviceConnected,
+                voiceEnabled: voiceEnabled
+            )
+        }
     }
 
     private var headerBar: some View {
@@ -73,10 +94,10 @@ struct DeviceInfoView: View {
                     Text("裝置連接")
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Text(appState.deviceConnected ? "已連接" : "未連接")
+                    Text(appState.effectiveDeviceConnected ? "已連接" : "未連接")
                         .font(.title)
                         .fontWeight(.black)
-                        .foregroundStyle(appState.deviceConnected ? .green : .red)
+                        .foregroundStyle(appState.effectiveDeviceConnected ? .green : .red)
                 }
             }
 

@@ -28,6 +28,7 @@ enum DashboardTab: Hashable {
 
 // MARK: - Summary
 
+@MainActor
 struct SummaryView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext

@@ -13,5 +13,5 @@ struct FirestoreDashboardSnapshot: Equatable {
 
 enum FirestoreDashboardPaths {
     /// 單一文件：裝置連線 + 電量 + 可選當日健康摘要
-    static let caregiverPrimaryDocument = "dashboard/caregiver_primary"
+    nonisolated static let caregiverPrimaryDocument = "dashboard/caregiver_primary"
 }

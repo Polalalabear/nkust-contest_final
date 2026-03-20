@@ -1,23 +1,26 @@
 import AVFoundation
+import CoreHaptics
 import Foundation
 import UIKit
 
-/// 實際語音（AVSpeechSynthesizer）+ 觸覺回饋（UIKit Haptics）。
-/// CoreHaptics 進階節奏可後續取代短震動組合 — 見 TODO。
+/// 實際語音（AVSpeechSynthesizer）+ 觸覺回饋（CoreHaptics 自訂節奏）。
 @MainActor
 final class LiveFeedbackManager: FeedbackManager {
     private let synthesizer = AVSpeechSynthesizer()
-    private let notificationGen = UINotificationFeedbackGenerator()
-    private let lightImpact = UIImpactFeedbackGenerator(style: .light)
-    private let heavyImpact = UIImpactFeedbackGenerator(style: .heavy)
+    private let fallbackNotificationGen = UINotificationFeedbackGenerator()
+    private let fallbackLightImpact = UIImpactFeedbackGenerator(style: .light)
+    private let fallbackHeavyImpact = UIImpactFeedbackGenerator(style: .heavy)
+    private var hapticEngine: CHHapticEngine?
+    private var supportsHaptics = false
 
     private var isMuted = false
     private var lastSpokenText: String = ""
 
     init() {
-        notificationGen.prepare()
-        lightImpact.prepare()
-        heavyImpact.prepare()
+        fallbackNotificationGen.prepare()
+        fallbackLightImpact.prepare()
+        fallbackHeavyImpact.prepare()
+        configureHaptics()
     }
 
     func deliverNavigationFeedback(_ result: DecisionResult, context: DecisionContext, voiceEnabled: Bool) {
@@ -54,8 +57,7 @@ final class LiveFeedbackManager: FeedbackManager {
     }
 
     func triggerSOS() {
-        heavyImpact.impactOccurred(intensity: 1.0)
-        notificationGen.notificationOccurred(.error)
+        playSOSPattern()
         if !isMuted {
             speak("緊急求助，已通知照護者")
         }
@@ -94,22 +96,105 @@ final class LiveFeedbackManager: FeedbackManager {
     // MARK: - Haptics（對應 PRD：強震動／短-短／短-長）
 
     private func hapticStop() {
-        notificationGen.notificationOccurred(.error)
-        heavyImpact.impactOccurred(intensity: 1.0)
-        // TODO: 改為 CoreHaptics 自訂「強烈持續」pattern 以更精準對齊 PRD
+        play(events: [
+            hapticContinuous(start: 0.0, duration: 0.42, intensity: 1.0, sharpness: 0.62),
+            hapticTransient(start: 0.02, intensity: 1.0, sharpness: 0.7)
+        ]) {
+            self.fallbackNotificationGen.notificationOccurred(.error)
+            self.fallbackHeavyImpact.impactOccurred(intensity: 1.0)
+        }
     }
 
     private func hapticMoveLeft() {
-        lightImpact.impactOccurred(intensity: 0.9)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-            self?.lightImpact.impactOccurred(intensity: 0.9)
+        play(events: [
+            hapticTransient(start: 0.0, intensity: 0.8, sharpness: 0.4),
+            hapticTransient(start: 0.13, intensity: 0.8, sharpness: 0.4)
+        ]) {
+            self.fallbackLightImpact.impactOccurred(intensity: 0.9)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+                self?.fallbackLightImpact.impactOccurred(intensity: 0.9)
+            }
         }
     }
 
     private func hapticMoveRight() {
-        lightImpact.impactOccurred(intensity: 0.85)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { [weak self] in
-            self?.heavyImpact.impactOccurred(intensity: 0.95)
+        play(events: [
+            hapticTransient(start: 0.0, intensity: 0.72, sharpness: 0.35),
+            hapticTransient(start: 0.24, intensity: 0.95, sharpness: 0.62)
+        ]) {
+            self.fallbackLightImpact.impactOccurred(intensity: 0.85)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { [weak self] in
+                self?.fallbackHeavyImpact.impactOccurred(intensity: 0.95)
+            }
         }
+    }
+
+    private func playSOSPattern() {
+        play(events: [
+            hapticContinuous(start: 0.0, duration: 0.28, intensity: 1.0, sharpness: 0.6),
+            hapticTransient(start: 0.34, intensity: 1.0, sharpness: 0.7),
+            hapticTransient(start: 0.52, intensity: 1.0, sharpness: 0.7)
+        ]) {
+            self.fallbackHeavyImpact.impactOccurred(intensity: 1.0)
+            self.fallbackNotificationGen.notificationOccurred(.error)
+        }
+    }
+
+    private func configureHaptics() {
+        supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
+        guard supportsHaptics else { return }
+        do {
+            hapticEngine = try CHHapticEngine()
+            hapticEngine?.isAutoShutdownEnabled = true
+            try hapticEngine?.start()
+        } catch {
+            supportsHaptics = false
+            hapticEngine = nil
+        }
+    }
+
+    private func play(events: [CHHapticEvent], fallback: () -> Void) {
+        guard supportsHaptics else {
+            fallback()
+            return
+        }
+        do {
+            if hapticEngine == nil {
+                configureHaptics()
+            }
+            guard let hapticEngine else {
+                fallback()
+                return
+            }
+            try? hapticEngine.start()
+            let pattern = try CHHapticPattern(events: events, parameters: [])
+            let player = try hapticEngine.makePlayer(with: pattern)
+            try player.start(atTime: 0)
+        } catch {
+            fallback()
+        }
+    }
+
+    private func hapticTransient(start: TimeInterval, intensity: Float, sharpness: Float) -> CHHapticEvent {
+        CHHapticEvent(
+            eventType: .hapticTransient,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness)
+            ],
+            relativeTime: start
+        )
+    }
+
+    private func hapticContinuous(start: TimeInterval, duration: TimeInterval, intensity: Float, sharpness: Float) -> CHHapticEvent {
+        CHHapticEvent(
+            eventType: .hapticContinuous,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness)
+            ],
+            relativeTime: start,
+            duration: duration
+        )
     }
 }

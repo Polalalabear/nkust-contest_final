@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WalkModeView: View {
+    @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool
     var onBack: (() -> Void)?
     @State private var viewModel = WalkModeViewModel()
@@ -35,10 +36,17 @@ struct WalkModeView: View {
             }
         }
         .onAppear {
+            viewModel.syncStreaming(mode: appState.dataSourceMode)
             viewModel.refreshNavigation(voiceEnabled: isVoiceEnabled)
+        }
+        .onChange(of: appState.dataSourceMode) { _, mode in
+            viewModel.syncStreaming(mode: mode)
         }
         .onChange(of: isVoiceEnabled) { _, newValue in
             viewModel.refreshNavigation(voiceEnabled: newValue)
+        }
+        .onDisappear {
+            viewModel.stopStreaming()
         }
     }
 

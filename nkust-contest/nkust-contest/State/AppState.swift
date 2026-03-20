@@ -39,13 +39,18 @@ final class AppState {
 
     // MARK: - 照護者主控台：裝置連線狀態（統一給 Dashboard / 個人資訊）
 
-    /// 主控台顯示用：已連線 / 尚未連線
-    var caregiverDeviceShowsConnected: Bool {
+    /// 全 app 共用：依資料來源判斷「有效裝置連線狀態」（視障者/照護者皆可用）
+    var effectiveDeviceConnected: Bool {
         switch dataSourceMode {
         case .mock:
             return mockDeviceConnected
         case .live:
             return liveFirestoreSnapshot?.connected == true
         }
+    }
+
+    /// 主控台顯示用：已連線 / 尚未連線
+    var caregiverDeviceShowsConnected: Bool {
+        effectiveDeviceConnected
     }
 }

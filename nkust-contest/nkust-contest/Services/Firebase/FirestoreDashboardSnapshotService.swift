@@ -12,7 +12,7 @@ final class FirestoreDashboardSnapshotService {
     private init() {}
 
     func startListening(
-        documentPath: String = FirestoreDashboardPaths.caregiverPrimaryDocument,
+        documentPath: String,
         onUpdate: @escaping (FirestoreDashboardSnapshot?) -> Void
     ) {
         stopListening()

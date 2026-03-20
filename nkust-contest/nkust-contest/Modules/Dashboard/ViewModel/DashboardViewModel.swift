@@ -71,7 +71,9 @@ final class DashboardViewModel {
     }
 
     private func startFirestoreListening(appState: AppState, modelContext: ModelContext) {
-        FirestoreDashboardSnapshotService.shared.startListening { [weak self] snap in
+        FirestoreDashboardSnapshotService.shared.startListening(
+            documentPath: FirestoreDashboardPaths.caregiverPrimaryDocument
+        ) { [weak self] snap in
             guard let self else { return }
             appState.liveFirestoreSnapshot = snap
             if let snap {
