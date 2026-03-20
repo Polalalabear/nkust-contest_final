@@ -21,7 +21,11 @@ struct AppRouter: View {
                         DeviceInfoView(
                             isVoiceEnabled: $state.isVoiceEnabled,
                             onBack: { appState.userRole = nil },
-                            onStart: { showMainFlow = true }
+                            onStart: {
+                                if appState.effectiveDeviceConnected {
+                                    showMainFlow = true
+                                }
+                            }
                         )
                     }
                 case .caregiver:
@@ -33,6 +37,11 @@ struct AppRouter: View {
         }
         .animation(.easeInOut, value: appState.userRole)
         .animation(.easeInOut, value: showMainFlow)
+        .onChange(of: appState.effectiveDeviceConnected) { _, connected in
+            if !connected {
+                showMainFlow = false
+            }
+        }
         .task {
             await bootstrapPersistence()
         }

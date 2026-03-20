@@ -567,6 +567,36 @@ struct PreferencesView: View {
                     Label("在主控台顯示圖表", systemImage: "chart.bar.xaxis")
                 }
             }
+
+            Section("語音範例（僅測試資料模式）") {
+                Button("範例：連線警示") {
+                    playSample("裝置目前尚未連線，請檢查 Wi-Fi 連線狀態", priority: .connectionAlert)
+                }
+                Button("範例：紅燈停留") {
+                    playSample("紅燈，請在原地停留", priority: .navigation)
+                }
+                Button("範例：障礙停止") {
+                    playSample("前方約三公尺有障礙，請停止", priority: .navigation)
+                }
+                Button("範例：向左修正") {
+                    playSample("請向左修正路徑", priority: .navigation)
+                }
+                Button("範例：向右修正") {
+                    playSample("請向右修正路徑", priority: .navigation)
+                }
+                Button("範例：SOS") {
+                    playSample("緊急求助，已通知照護者", priority: .sos)
+                }
+            }
+            .disabled(appState.dataSourceMode != .mock)
+
+            if appState.dataSourceMode != .mock {
+                Section {
+                    Text("語音範例僅在測試資料模式可觸發。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .navigationTitle("設定偏好")
         .navigationBarTitleDisplayMode(.inline)
@@ -574,6 +604,15 @@ struct PreferencesView: View {
         .onDisappear {
             try? AppSettingsPersistence.save(from: appState, context: modelContext)
         }
+    }
+
+    private func playSample(_ text: String, priority: VoicePriority) {
+        guard appState.dataSourceMode == .mock else { return }
+        VoiceAnnouncementCenter.shared.speak(
+            text,
+            priority: priority,
+            interruptLowerPriority: true
+        )
     }
 }
 

@@ -199,6 +199,10 @@ ChooseUserView
 - [x] CoreHaptics 自訂節奏（強停／短-短／短-長）已接入 `LiveFeedbackManager`（含 UIKit fallback）
 - [x] 視障者 UI（DeviceInfo + ModeHeader）吃 `mock/live` 同步連線狀態，未連線時語音告知使用者
 - [x] `MJPEGStreamService`（URLSession + 手動 JPEG 解析）已完成，預設仍依階段規則使用 Mock
+- [x] 視障者未連線時僅可停留連線處理畫面；不可進入 Walk/Recognition/LTC
+- [x] 連線警示語音改為「進入先播一次，播報結束後每 5 秒重播」
+- [x] 照護者「一鍵取得附近醫院」會開啟 Google Maps 並選取最近醫院
+- [x] 偏好設定新增語音範例按鈕（僅 mock 模式可觸發）
 
 ### ❌ 待完成（依優先順序）
 

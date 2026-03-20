@@ -53,8 +53,8 @@ final class DashboardViewModel {
             do {
                 let response = try await MKLocalSearch(request: request).start()
                 let nearest = response.mapItems.min(by: {
-                    let l0 = $0.location ?? CLLocation(latitude: sourceCoordinate.latitude, longitude: sourceCoordinate.longitude)
-                    let l1 = $1.location ?? CLLocation(latitude: sourceCoordinate.latitude, longitude: sourceCoordinate.longitude)
+                    let l0 = $0.location
+                    let l1 = $1.location
                     let d0 = l0.distance(from: sourceLocation)
                     let d1 = l1.distance(from: sourceLocation)
                     return d0 < d1

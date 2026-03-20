@@ -666,3 +666,32 @@ It is a **machine-readable development log**
 
 **Notes**
 - Firestore “API not enabled / permission denied” still requires Firebase Console configuration; app now degrades gracefully and reports incident once per listener start
+
+---
+
+### [2026-03-20 15:05]
+
+**Feature**
+- Fix Swift 6 actor-safety warning by moving `AVSpeechSynthesizerDelegate` conformance to a non-actor proxy and forwarding completion events safely to `VoiceAnnouncementCenter`
+- Tighten visually-impaired flow gating: when disconnected, user is kept in DeviceInfo (connection handling) and cannot enter other modes
+- Add caregiver preferences voice-sample buttons (available in `mock` mode only)
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/Feedback/VoiceAnnouncementCenter.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/Modules/DeviceInfo/View/DeviceInfoView.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /README.md
+- /docs/handoff.md
+
+**State Changes**
+- Voice completion callbacks are now routed through `VoiceSynthDelegateProxy` and resumed on MainActor
+- `AppRouter` now rejects start when disconnected and auto-returns to DeviceInfo on disconnection
+- Preferences now include actionable voice examples (connection alert, navigation actions, SOS) guarded by data mode
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Existing dashboard nearest-hospital Google Maps jump and 5-second disconnected reminders remain active and documented

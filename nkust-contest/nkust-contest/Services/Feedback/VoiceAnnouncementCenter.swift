@@ -9,16 +9,21 @@ enum VoicePriority: Int {
 }
 
 @MainActor
-final class VoiceAnnouncementCenter: NSObject, AVSpeechSynthesizerDelegate {
+final class VoiceAnnouncementCenter {
     static let shared = VoiceAnnouncementCenter()
 
     private let synthesizer = AVSpeechSynthesizer()
+    private let delegateProxy = VoiceSynthDelegateProxy()
     private var activePriority: VoicePriority?
     private var pendingCompletions: [ObjectIdentifier: CheckedContinuation<Void, Never>] = [:]
 
-    private override init() {
-        super.init()
-        synthesizer.delegate = self
+    private init() {
+        delegateProxy.onUtteranceFinished = { [weak self] utterance in
+            Task { @MainActor [weak self] in
+                self?.resolveCompletion(for: utterance)
+            }
+        }
+        synthesizer.delegate = delegateProxy
     }
 
     func speak(_ text: String, priority: VoicePriority, interruptLowerPriority: Bool = true) {
@@ -84,14 +89,18 @@ final class VoiceAnnouncementCenter: NSObject, AVSpeechSynthesizerDelegate {
         synthesizer.stopSpeaking(at: .immediate)
         activePriority = nil
     }
+}
+
+private final class VoiceSynthDelegateProxy: NSObject, AVSpeechSynthesizerDelegate {
+    var onUtteranceFinished: ((AVSpeechUtterance) -> Void)?
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         _ = synthesizer
-        resolveCompletion(for: utterance)
+        onUtteranceFinished?(utterance)
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         _ = synthesizer
-        resolveCompletion(for: utterance)
+        onUtteranceFinished?(utterance)
     }
 }

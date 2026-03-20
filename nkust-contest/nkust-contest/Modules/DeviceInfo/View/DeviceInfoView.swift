@@ -26,7 +26,7 @@ struct DeviceInfoView: View {
                 Spacer()
 
                 Button {
-                    onStart()
+                    attemptStart()
                 } label: {
                     Text("點擊任意處開始啟動辨識")
                         .font(.subheadline)
@@ -37,7 +37,7 @@ struct DeviceInfoView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            onStart()
+            attemptStart()
         }
         .onAppear {
             ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
@@ -84,6 +84,18 @@ struct DeviceInfoView: View {
             VoiceToggleButton(isEnabled: $isVoiceEnabled)
         }
         .padding(.horizontal)
+    }
+
+    private func attemptStart() {
+        guard appState.effectiveDeviceConnected else {
+            ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
+                screenID: "device_info",
+                isConnected: false,
+                voiceEnabled: isVoiceEnabled
+            )
+            return
+        }
+        onStart()
     }
 
     private var deviceCard: some View {
