@@ -11,7 +11,8 @@ struct ObstacleInfo {
     let description: String
     let distance: Int
 
-    static let mock = ObstacleInfo(description: "前方有障礙物", distance: 5)
+    /// 距離 8 公尺：配合 DefaultDecisionEngine 會得到「向右修正」類決策，與方向卡示意一致
+    static let mock = ObstacleInfo(description: "前方有障礙物", distance: 8)
     static let empty = ObstacleInfo(description: "", distance: 0)
 }
 
@@ -31,11 +32,26 @@ struct TrafficLightInfo {
     static let none = TrafficLightInfo(isRed: false, instruction: "")
 }
 
-struct DecisionContext {
-    let obstacleDetected: Bool
+struct DecisionContext: Equatable {
+    /// 是否偵測到前方障礙（含距離資訊有效時）
+    var obstacleDetected: Bool
+    /// 與障礙物距離（公尺），僅在 obstacleDetected 時有意義
+    var obstacleDistanceMeters: Int
+    /// 號誌為紅燈時為 true
+    var trafficLightRed: Bool
+
+    init(
+        obstacleDetected: Bool = false,
+        obstacleDistanceMeters: Int = 0,
+        trafficLightRed: Bool = false
+    ) {
+        self.obstacleDetected = obstacleDetected
+        self.obstacleDistanceMeters = obstacleDistanceMeters
+        self.trafficLightRed = trafficLightRed
+    }
 }
 
-struct DecisionResult {
+struct DecisionResult: Equatable {
     let action: NavigationAction
 }
 

@@ -339,3 +339,42 @@ It is a **machine-readable development log**
 - Dark mode uses .preferredColorScheme on DashboardView; only affects caregiver flow currently
 - Preferences are in-memory — TODO: persist with SwiftData / UserDefaults
 - Version is now 1.2.0
+
+---
+
+### [2026-03-19 18:30]
+
+**Feature**
+- Real `DefaultDecisionEngine`: rules from traffic red, obstacle distance bands → STOP / MOVE_LEFT / MOVE_RIGHT / SAFE
+- Real `LiveFeedbackManager`: AVSpeechSynthesizer (zh-TW) + UIKit haptics mapped to actions; replay / mute / SOS
+- `DefaultWalkModeService`: composes engine + feedback; `evaluateNavigation(context:voiceEnabled:)`
+- `WalkModeViewModel` @MainActor: builds `DecisionContext` from obstacle/traffic UI state; `refreshNavigation` on appear + voice toggle
+- `DecisionContext` expanded: obstacleDistanceMeters, trafficLightRed
+- `FeedbackManager` protocol: added `deliverNavigationFeedback`
+- Stub types retained for tests / alternate wiring
+- Version 1.3.0
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Shared/Models/DecisionModels.swift
+- /nkust-contest/nkust-contest/Core/Engine/DecisionEngine.swift
+- /nkust-contest/nkust-contest/Core/Engine/FeedbackManager.swift
+- /nkust-contest/nkust-contest/Services/Feedback/LiveFeedbackManager.swift (new)
+- /nkust-contest/nkust-contest/Modules/WalkMode/Service/WalkModeService.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/Engine/WalkModeEngine.swift
+- /nkust-contest/nkust-contest/State/AppState.swift (appVersion)
+
+**State Changes**
+- DecisionContext is now a struct with obstacleDetected, obstacleDistanceMeters, trafficLightRed
+- ObstacleInfo.mock distance 8m to align with MOVE_RIGHT band in DefaultDecisionEngine
+- WalkMode default service path: DefaultWalkModeService + DefaultDecisionEngine + LiveFeedbackManager
+
+**Test Coverage**
+- xcodebuild: generic/platform=iOS (unsandboxed)
+- Result: PASS
+
+**Notes**
+- CoreHaptics custom patterns not yet implemented — TODO in LiveFeedbackManager
+- AI / Stream remain stubs; engine input still from mock UI state until camera+model wired
+- MainActor default isolation: DefaultWalkModeService uses convenience init to construct dependencies

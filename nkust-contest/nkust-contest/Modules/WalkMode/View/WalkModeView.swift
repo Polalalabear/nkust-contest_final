@@ -34,6 +34,12 @@ struct WalkModeView: View {
                 .padding(.bottom, 40)
             }
         }
+        .onAppear {
+            viewModel.refreshNavigation(voiceEnabled: isVoiceEnabled)
+        }
+        .onChange(of: isVoiceEnabled) { _, newValue in
+            viewModel.refreshNavigation(voiceEnabled: newValue)
+        }
     }
 
     private var obstacleCard: some View {

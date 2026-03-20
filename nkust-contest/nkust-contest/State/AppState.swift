@@ -26,6 +26,6 @@ final class AppState {
     var preferredChartStyle: ChartStyle = .bar
     var isDarkMode: Bool = false
 
-    static let appVersion = "1.2.0"
+    static let appVersion = "1.3.0"
     static let buildDate = "2026.03.19"
 }

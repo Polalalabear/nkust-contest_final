@@ -160,6 +160,8 @@ ChooseUserView
 - [x] 日間/夜間模式切換（PreferencesView → .preferredColorScheme）
 - [x] 日期格式統一 M/d（e.g. 3/15）
 - [x] 匯出 CSV 按鈕（AllHealthDataView 底部，stub，可選時間範圍）
+- [x] DefaultDecisionEngine + LiveFeedbackManager + DefaultWalkModeService 行走模式串接
+- [x] 版本 v1.3.0
 - [x] `#Preview` 加入所有 View 檔案
 - [x] README.md + .gitignore
 
@@ -167,8 +169,7 @@ ChooseUserView
 
 | 優先級 | 任務 | 說明 |
 |---|---|---|
-| 🔴 P0 | DecisionEngine 實作 | 核心決策邏輯（STOP / MOVE LEFT / MOVE RIGHT / SAFE） |
-| 🔴 P0 | FeedbackManager 實作 | CoreHaptics 振動 + AVSpeechSynthesizer 語音 |
+| 🟡 P1 | CoreHaptics 精準節奏 | 取代 UIKit haptics，對齊 PRD 短-短／短-長／強停 |
 | 🟡 P1 | AI Service 接入 | CoreML 或 Gemini API 整合 |
 | 🟡 P1 | MJPEG Stream 接入 | URLSession 串流影像 |
 | 🟡 P1 | 真實攝影機整合 | AVFoundation 替換 CameraPreviewPlaceholder |

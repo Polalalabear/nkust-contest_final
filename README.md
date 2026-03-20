@@ -75,8 +75,11 @@ nkust-contest/nkust-contest/
 - [x] 設定偏好（日間/夜間模式、圖表樣式選擇含預覽）
 - [x] 匯出 CSV 按鈕（stub，可選擇時間範圍）
 - [x] 版本號更新至 v1.2.0
-- [ ] DecisionEngine 實作
-- [ ] FeedbackManager 實作（CoreHaptics + AVSpeechSynthesizer）
+- [x] DecisionEngine 實作（DefaultDecisionEngine：距離／紅燈規則）
+- [x] FeedbackManager 實作（LiveFeedbackManager：AVSpeech + UIKit Haptics；CoreHaptics 進階 TODO）
+- [x] WalkMode 串接 evaluateNavigation + 進入畫面／語音開關觸發回饋
+- [x] 版本號更新至 v1.3.0
+- [ ] CoreHaptics 自訂節奏（對齊 PRD 短-短／短-長）
 - [ ] AI Service 接入（CoreML / Gemini）
 - [ ] MJPEG Stream 接入
 - [ ] 真實定位整合
