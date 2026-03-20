@@ -524,3 +524,27 @@ It is a **machine-readable development log**
 
 **Notes**
 - `Sources/CoreEngine/*.mlpackage` currently appear incomplete (manifest-only) and will trigger model incident fallback until fixed
+
+---
+
+### [2026-03-20 12:55]
+
+**Feature**
+- Fix remaining `DashboardViewModel` main-actor default-argument warning
+- Update CoreML runtime locator to prioritize `Sources/CoreEngine/Data` model directory as requested
+- Keep strict incident reporting when model directory/package structure is invalid
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+
+**State Changes**
+- `DashboardViewModel.init` now uses optional injection + in-body default construction to avoid nonisolated default-arg warning
+- `CoreMLModelRuntime` now validates `Sources/CoreEngine/Data` path and reports explicit directory-missing errors
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Current workspace still does not contain `/Sources/CoreEngine/Data`; app will report incident until model assets are added there

@@ -19,8 +19,8 @@ final class DashboardViewModel {
 
     private let service: DashboardServicing
 
-    init(service: DashboardServicing = StubDashboardService()) {
-        self.service = service
+    init(service: DashboardServicing? = nil) {
+        self.service = service ?? StubDashboardService()
     }
 
     func callUser() {
