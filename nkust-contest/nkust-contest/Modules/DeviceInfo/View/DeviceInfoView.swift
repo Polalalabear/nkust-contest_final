@@ -5,6 +5,7 @@ struct DeviceInfoView: View {
     @Binding var isVoiceEnabled: Bool
     var onBack: () -> Void
     var onStart: () -> Void
+    var onReconnect: (() -> Void)?
 
     var body: some View {
         ZStack {
@@ -109,16 +110,34 @@ struct DeviceInfoView: View {
                     Text("裝置連接")
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Text(appState.effectiveDeviceConnected ? "已連接" : "未連接")
+                    Text(connectionStatusText)
                         .font(.title)
                         .fontWeight(.black)
-                        .foregroundStyle(appState.effectiveDeviceConnected ? .green : .red)
+                        .foregroundStyle(connectionStatusColor)
                 }
             }
 
             Text("(請開起 wifi 功能)")
                 .font(.caption)
                 .foregroundStyle(.gray)
+
+            if !appState.effectiveDeviceConnected && appState.dataSourceMode == .live {
+                Button {
+                    onReconnect?()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("重新連線")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(.blue))
+                }
+                .accessibilityLabel("重新連線")
+                .padding(.top, 4)
+            }
 
             Divider().background(.gray)
 
@@ -191,6 +210,30 @@ struct DeviceInfoView: View {
         }
     }
 
+    private var connectionStatusText: String {
+        if appState.dataSourceMode == .live {
+            switch appState.liveStreamHealthState {
+            case .connecting: return "連線中..."
+            case .connected: return "已連接"
+            case .stale: return "訊號不穩"
+            case .disconnected: return "未連接"
+            }
+        }
+        return appState.effectiveDeviceConnected ? "已連接" : "未連接"
+    }
+
+    private var connectionStatusColor: Color {
+        if appState.dataSourceMode == .live {
+            switch appState.liveStreamHealthState {
+            case .connected: return .green
+            case .connecting: return .yellow
+            case .stale: return .orange
+            case .disconnected: return .red
+            }
+        }
+        return appState.effectiveDeviceConnected ? .green : .red
+    }
+
     private func batteryColor(_ percent: Int) -> Color {
         if percent > 50 { return .green }
         if percent > 20 { return .yellow }
@@ -199,6 +242,6 @@ struct DeviceInfoView: View {
 }
 
 #Preview {
-    DeviceInfoView(isVoiceEnabled: .constant(true), onBack: {}, onStart: {})
+    DeviceInfoView(isVoiceEnabled: .constant(true), onBack: {}, onStart: {}, onReconnect: {})
         .environment(AppState())
 }

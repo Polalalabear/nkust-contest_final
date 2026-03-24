@@ -873,3 +873,32 @@ It is a **machine-readable development log**
 - Root cause: no ATS exception → iOS silently blocked plain HTTP to `192.168.4.1`; compounded by no retry logic and aggressive 2.5s stale timeout for initial connection
 - `NSAllowsLocalNetworking` covers local IP ranges (192.168.x.x); no need for `NSAllowsArbitraryLoads`
 - iOS may show a one-time "allow local network access" prompt on first connection attempt
+
+---
+
+### [2026-03-24 20:15]
+
+**Feature**
+- Fix connect-disconnect loop when entering visually impaired main flow in live mode
+- Add manual reconnect button and live connection status display to DeviceInfoView
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/Modules/DeviceInfo/View/DeviceInfoView.swift
+- /README.md
+
+**State Changes**
+- `StreamHealthCoordinator.stopMonitoring(preserveHealthState:)`: new parameter; when `true`, sets `ignoreHealthUpdates` flag so the async `.disconnected` callback from the stopped stream doesn't propagate to AppState
+- `StreamHealthCoordinator.forceReconnect()`: new method; stops current stream, resets retry count, immediately starts fresh connection attempt
+- `AppRouter.syncLiveMonitoring()`: when stopping because `showMainFlow == true` (user entered main flow after successful preflight), passes `preserveHealthState: true` to keep `liveStreamHealthState` as `.connected`
+- `DeviceInfoView`: added `onReconnect` callback; shows "重新連線" button when disconnected in live mode; connection status text now shows 4 states (連線中.../已連接/訊號不穩/未連接) with color-coded display
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Root cause of loop: `canStartLiveMonitoring` requires `!showMainFlow`; coordinator detected `connected` → user enters main flow → coordinator stops → health resets to `disconnected` → user kicked out → coordinator restarts → loop
+- Fix preserves health state when the stop reason is "user is entering main flow" (not "user changed mode/role")
+- `ignoreHealthUpdates` flag blocks the async `onHealthChange` callback that arrives after `monitorService.stop()` returns

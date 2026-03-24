@@ -336,6 +336,7 @@ final class StreamHealthCoordinator {
     private let monitorService: StreamService
     private var isMonitoring = false
     private var currentState: StreamHealthState = .disconnected
+    private var ignoreHealthUpdates = false
     private var retryTask: Task<Void, Never>?
     private var retryCount = 0
     private let maxRetries = 5
@@ -345,7 +346,8 @@ final class StreamHealthCoordinator {
         self.monitorService = monitorService ?? MJPEGStreamService()
         self.monitorService.onHealthChange = { [weak self] state in
             Task { @MainActor [weak self] in
-                self?.apply(state: state)
+                guard let self, !self.ignoreHealthUpdates else { return }
+                self.apply(state: state)
             }
         }
     }
@@ -353,19 +355,43 @@ final class StreamHealthCoordinator {
     func startMonitoring() {
         guard !isMonitoring else { return }
         isMonitoring = true
+        ignoreHealthUpdates = false
         retryCount = 0
         cancelRetry()
         StartupTrace.log("ConnectionState", "coordinator start monitoring")
         monitorService.start()
     }
 
-    func stopMonitoring() {
+    /// When `preserveHealthState` is true, the coordinator stops the underlying
+    /// stream but does NOT reset `currentState` or propagate `.disconnected`
+    /// to `onStateChange`. Used when entering the main flow after a successful
+    /// preflight check — the health state is kept as-is so the UI doesn't
+    /// bounce back to "disconnected".
+    func stopMonitoring(preserveHealthState: Bool = false) {
         guard isMonitoring else { return }
         isMonitoring = false
         cancelRetry()
-        StartupTrace.log("ConnectionState", "coordinator stop monitoring")
+        if preserveHealthState {
+            ignoreHealthUpdates = true
+        }
+        StartupTrace.log("ConnectionState", "coordinator stop monitoring (preserve=\(preserveHealthState))")
         monitorService.stop()
-        apply(state: .disconnected)
+        if !preserveHealthState {
+            apply(state: .disconnected)
+        }
+    }
+
+    /// User-triggered reconnect: resets retry count, stops any in-flight
+    /// stream, and immediately starts a fresh connection attempt.
+    func forceReconnect() {
+        StartupTrace.log("ConnectionState", "coordinator force reconnect")
+        ignoreHealthUpdates = false
+        retryCount = 0
+        cancelRetry()
+        monitorService.stop()
+        isMonitoring = true
+        apply(state: .connecting)
+        monitorService.start()
     }
 
     private func apply(state: StreamHealthState) {

@@ -117,7 +117,9 @@ nkust-contest/nkust-contest/
 - [x] SwiftData/CoreData 初始化安全：啟動前先確保 `Application Support` 目錄存在，避免 default.store 建檔失敗  
 - [x] 啟動效能：`StreamHealthCoordinator` 延遲初始化（Optional + `ensureCoordinator()`），避免 View init 路徑分配 MJPEGStreamService  
 - [x] ATS 例外：`NSAllowsLocalNetworking` + `NSLocalNetworkUsageDescription` 允許 ESP32 HTTP 本地連線  
-- [x] 連線韌性：初始連線寬限 8s、URLSession 強制 WiFi、coordinator 自動重試（最多 5 次指數退避）  
+- [x] 連線韌性：初始連線寬限 8s、URLSession 強制 WiFi、coordinator 自動重試（最多 5 次退避）  
+- [x] 修正連線偵測迴圈：進入主流程時保留健康狀態，不再因 coordinator 停止而重設為 disconnected  
+- [x] 手動重新連線：DeviceInfoView 未連線時顯示「重新連線」按鈕 + 即時連線狀態文字（連線中/已連接/訊號不穩/未連接）  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 

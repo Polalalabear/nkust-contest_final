@@ -30,6 +30,9 @@ struct AppRouter: View {
                                     if appState.effectiveDeviceConnected {
                                         showMainFlow = true
                                     }
+                                },
+                                onReconnect: {
+                                    streamHealthCoordinator?.forceReconnect()
                                 }
                             )
                         }
@@ -121,9 +124,17 @@ struct AppRouter: View {
         } else {
             pendingMonitorTask?.cancel()
             pendingMonitorTask = nil
-            streamHealthCoordinator?.stopMonitoring()
-            if appState.dataSourceMode != .live || appState.userRole != .visuallyImpaired {
-                appState.liveStreamHealthState = .disconnected
+
+            let enteringMainFlow = showMainFlow
+                && appState.userRole == .visuallyImpaired
+                && appState.dataSourceMode == .live
+
+            streamHealthCoordinator?.stopMonitoring(preserveHealthState: enteringMainFlow)
+
+            if !enteringMainFlow {
+                if appState.dataSourceMode != .live || appState.userRole != .visuallyImpaired {
+                    appState.liveStreamHealthState = .disconnected
+                }
             }
         }
     }
