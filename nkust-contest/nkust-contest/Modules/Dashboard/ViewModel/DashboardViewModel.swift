@@ -90,7 +90,7 @@ final class DashboardViewModel {
         }
     }
 
-    /// 依資料來源重新載入；真實模式會啟動 Firestore 監聽並合併 SwiftData
+    /// 依資料來源重新載入；Firebase 暫停期間 live 走本地資料回退。
     func syncDataSource(mode: DataSourceMode, appState: AppState, modelContext: ModelContext) {
         switch mode {
         case .mock:
@@ -100,7 +100,10 @@ final class DashboardViewModel {
             chartDetailRecords = DailyHealthRecord.mockThreeMonths()
 
         case .live:
+            // Firebase 暫停：強制走本地連線狀態，避免串流受雲端連線阻塞。
+            appState.liveModeDeviceConnected = true
             FirestoreDashboardSnapshotService.shared.stopListening()
+            appState.liveFirestoreSnapshot = nil
             do {
                 try HealthRecordsPersistence.seedIfEmpty(in: modelContext)
                 reloadFromSwiftData(modelContext: modelContext)
@@ -108,7 +111,8 @@ final class DashboardViewModel {
                 weekRecords = DailyHealthRecord.mockWeek()
                 chartDetailRecords = DailyHealthRecord.mockThreeMonths()
             }
-            startFirestoreListening(appState: appState, modelContext: modelContext)
+            // Firebase 暫停：不啟動 Firestore snapshot listener。
+            // startFirestoreListening(appState: appState, modelContext: modelContext)
         }
     }
 

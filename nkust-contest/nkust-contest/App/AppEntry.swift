@@ -1,4 +1,3 @@
-import FirebaseCore
 import Foundation
 import SwiftData
 import SwiftUI
@@ -8,7 +7,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        FirebaseApp.configure()
+        // Firebase 暫停：離線模式下不進行雲端初始化。
+        _ = application
+        _ = launchOptions
         return true
     }
 }

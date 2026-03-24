@@ -169,7 +169,7 @@ struct SummaryView: View {
             .pickerStyle(.segmented)
             Text(appState.dataSourceMode == .mock
                  ? "使用記憶體假資料，可模擬斷線。"
-                 : "Firestore 即時快照 + SwiftData 本地快取（見 README 欄位契約）。")
+                 : "Firebase 已暫停；目前使用本地回退資料（離線可用）。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

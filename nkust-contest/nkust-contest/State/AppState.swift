@@ -14,6 +14,8 @@ final class AppState {
 
     /// 真實資料模式：Firestore `dashboard/caregiver_primary` 最新快照（nil = 尚未取得或監聽停止）
     var liveFirestoreSnapshot: FirestoreDashboardSnapshot?
+    /// Firebase 暫停期間的本地連線回退狀態（可由 UI/流程直接控制）
+    var liveModeDeviceConnected: Bool = true
 
     var dataSourceMode: DataSourceMode = .mock
 
@@ -45,7 +47,7 @@ final class AppState {
         case .mock:
             return mockDeviceConnected
         case .live:
-            return liveFirestoreSnapshot?.connected == true
+            return liveModeDeviceConnected
         }
     }
 

@@ -1,3 +1,4 @@
+import FirebaseCore
 import FirebaseFirestore
 import Foundation
 
@@ -7,7 +8,6 @@ final class FirestoreDashboardSnapshotService {
     static let shared = FirestoreDashboardSnapshotService()
 
     private var registration: ListenerRegistration?
-    private let db = Firestore.firestore()
 
     private init() {}
 
@@ -16,6 +16,11 @@ final class FirestoreDashboardSnapshotService {
         onUpdate: @escaping (FirestoreDashboardSnapshot?) -> Void
     ) {
         stopListening()
+        guard FirebaseApp.app() != nil else {
+            onUpdate(nil)
+            return
+        }
+        let db = Firestore.firestore()
         let doc = db.document(documentPath)
         registration = doc.addSnapshotListener { snapshot, error in
             Task { @MainActor in
