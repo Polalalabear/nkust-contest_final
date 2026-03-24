@@ -754,3 +754,35 @@ It is a **machine-readable development log**
 
 **Notes**
 - Change scope is initialization and parser safety only; no architecture/layer refactor
+
+---
+
+### [2026-03-24 17:25]
+
+**Feature**
+- Add console debug logs for mode switching and streaming lifecycle in visually impaired flow
+- Fix cyclic mode switching instability by replacing uncancelled delayed wrap-jumps with cancellable task-based scheduling
+- Enable LTC mode to display ESP32 stream frames in `live` + connected state, aligned with Walk/Recognition behavior
+- Expand README with concrete ESP32 MJPEG frame-splitting technical details and updated live-mode/testing notes
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/MainTab/View/MainTabView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/LTCMode/View/LTCModeView.swift
+- /nkust-contest/nkust-contest/Modules/LTCMode/ViewModel/LTCModeViewModel.swift
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+- /README.md
+
+**State Changes**
+- MainTab wrap-jump now cancels stale pending tasks and validates sentinel state before applying page reset
+- Added stream/status debug output prefixes: `[MainTab]`, `[WalkMode]`, `[RecognitionMode]`, `[LTCMode]`, `[MJPEGStream]`
+- LTC view model now owns stream lifecycle and latest-frame state; LTC screen now renders live frame background under the same gating condition as other visually impaired modes (`DataSourceMode.live && effectiveDeviceConnected`)
+- README now documents MJPEG parser internals (boundary-first + marker-fallback), buffer guard, thread model, and console verification points
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- This change keeps existing architecture boundaries (View/ViewModel/Service) and does not introduce new dependencies

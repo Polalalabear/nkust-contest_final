@@ -72,7 +72,7 @@ View → ViewModel → Service → Engine
 
 ### 與 ESP32 相機串流（必讀）
 
-`/docs/device-connection.md`：**開發階段仍使用 MockStreamService**，不可直接連 `http://192.168.4.1/stream`，直到專案進入下一階段。Firestore 與 MJPEG 為不同資料路徑。
+`/docs/device-connection.md`：目前 `StreamDevelopmentPhase.current` 已允許 `MJPEGStreamService`，但仍由上層以 `DataSourceMode.live && effectiveDeviceConnected` 決定是否啟用實際串流；`mock` 模式仍只走 Mock 行為。Firestore 與 MJPEG 為不同資料路徑。
 
 ---
 
@@ -110,9 +110,10 @@ nkust-contest/nkust-contest/
 - [x] 照護者：裝置狀態列、測試/真實資料切換、Firestore 監聽  
 - [x] DecisionEngine / LiveFeedbackManager / WalkMode 串接  
 - [x] CoreHaptics 自訂節奏（LiveFeedbackManager：強停 / 短短 / 短長）  
-- [x] MJPEG 真實串流服務（`MJPEGStreamService`，URLSession + 手動 JPEG 解析；預設仍遵守階段規則使用 Mock）  
+- [x] MJPEG 真實串流服務（`MJPEGStreamService`，URLSession + 手動 JPEG 解析）  
 - [x] `live` 模式主線打通（Stream frame → CoreML/Vision → DecisionEngine → Feedback）  
 - [x] MJPEG parser 強化：支援 `multipart/x-mixed-replace` boundary 解析，並保留 JPEG marker fallback  
+- [x] 視障者三模式（Walk / Recognition / LTC）在 `live` + 已連線時皆可顯示最新 ESP32 frame  
 - [x] SwiftData/CoreData 初始化安全：啟動前先確保 `Application Support` 目錄存在，避免 default.store 建檔失敗  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
@@ -125,8 +126,25 @@ nkust-contest/nkust-contest/
   2) 每幀送入 `LiveAIService`（CoreML + Vision）  
   3) 生成導航上下文後交給 `DefaultDecisionEngine`  
   4) 經 `LiveFeedbackManager` 輸出語音／震動  
-- Walk / Recognition 背景可顯示最新 frame（無畫面時回退 placeholder）。
+- Walk / Recognition / LTC 背景可顯示最新 frame（無畫面時回退 placeholder）。
 - 串流資料解析在背景 queue 進行，`onFrame` 回主執行緒更新 UI（避免主執行緒阻塞）。
+
+## ESP32 MJPEG 切幀技術細節
+
+- 入口：`Services/Stream/StreamService.swift` 的 `MJPEGStreamService`（`URLSessionDataDelegate`）。
+- 連線建立：`start()` 對 `http://192.168.4.1/stream` 建立長連線，`didReceive response` 時檢查 `Content-Type`。
+- 解析策略（兩段式）：
+  1) **Boundary parser 優先**：若 header 含 `multipart/x-mixed-replace; boundary=...`，先用 boundary 切每個 part，再從 part 的 body 抽 JPEG。  
+  2) **JPEG marker fallback**：若 boundary 缺失或異常，改用 `FFD8`/`FFD9`（SOI/EOI）掃描切幀。
+- 記憶體保護：`maxBufferBytes`（2MB）避免異常流導致 buffer 無限增長。
+- 執行緒模型：解析在 `mjpeg.stream.processing` 背景 queue；`emit(frame:)` 回主執行緒更新 UI。
+- 失敗策略：`didCompleteWithError` 僅送 `nil frame`，不 crash、不激進重試（符合 `/docs/device-connection.md`）。
+- Console 偵錯重點（可在 Xcode Console 觀察）：
+  - `[MJPEGStream] start stream request ...`
+  - `[MJPEGStream] connected status=...`
+  - `[MJPEGStream] boundary parser enabled=true/false`
+  - `[WalkMode] ...` / `[RecognitionMode] ...` / `[LTCMode] ...`（模式層串流同步）
+  - `[MainTab] ...`（模式切換與循環跳轉）
 
 ## 持久化初始化安全（CoreData/SwiftData）
 
@@ -173,7 +191,7 @@ nkust-contest/nkust-contest/
 
 1. iPhone 先手動連上 `XIAO-S3-CAM`（密碼 `password123`）。
 2. 進入照護者主控台，切到「真實資料」模式（`DataSourceMode.live`）。
-3. 進入視障者 `Walk` 或 `Recognition`，確認狀態有進入串流流程（`連線中` → `串流已連線` / `等待影像中`）。
+3. 進入視障者 `Walk` / `Recognition` / `LTC`，確認畫面背景會更新為 ESP32 frame；若來源暫時中斷，應顯示 placeholder 並可在 Console 看到 `received nil frame` log。
 4. 若切回「測試資料」模式（`mock`），串流應立即停止（只走 Mock）。
 
 ### 2) CoreML 模型是否真的被使用

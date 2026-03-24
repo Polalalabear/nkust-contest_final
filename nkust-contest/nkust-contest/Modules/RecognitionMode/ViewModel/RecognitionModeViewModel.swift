@@ -53,6 +53,7 @@ final class RecognitionModeViewModel {
         currentMode = mode
         let shouldUseLiveStream = mode == .live && useDeviceCamera && isConnected
         isUsingLiveStream = shouldUseLiveStream
+        debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected) useDeviceCamera=\(useDeviceCamera)")
 
         if shouldUseLiveStream {
             startStreamingIfNeeded()
@@ -63,12 +64,14 @@ final class RecognitionModeViewModel {
 
     func stopStreaming() {
         guard isStreaming else { return }
+        debugLog("stop stream")
         streamService.stop()
         isStreaming = false
     }
 
     private func startStreamingIfNeeded() {
         guard !isStreaming else { return }
+        debugLog("start stream")
         streamService.start()
         isStreaming = true
     }
@@ -76,6 +79,7 @@ final class RecognitionModeViewModel {
     private func handleIncomingFrame(_ frame: UIImage?) {
         guard isUsingLiveStream else { return }
         guard let frame else {
+            debugLog("received nil frame")
             if resultDescription.isEmpty {
                 resultDescription = "等待串流畫面中"
             }
@@ -109,5 +113,9 @@ final class RecognitionModeViewModel {
         Task { @MainActor in
             stream.stop()
         }
+    }
+
+    private func debugLog(_ message: String) {
+        print("[RecognitionMode] \(message)")
     }
 }

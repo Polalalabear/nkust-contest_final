@@ -59,6 +59,7 @@ final class MJPEGStreamService: NSObject, StreamService {
 
     func start() {
         guard task == nil else { return }
+        debugLog("start stream request \(streamURL.absoluteString)")
 
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 15
@@ -72,6 +73,7 @@ final class MJPEGStreamService: NSObject, StreamService {
     }
 
     func stop() {
+        debugLog("stop stream request")
         task?.cancel()
         task = nil
         session?.invalidateAndCancel()
@@ -86,6 +88,10 @@ final class MJPEGStreamService: NSObject, StreamService {
         DispatchQueue.main.async { [weak self] in
             self?.onFrame?(frame)
         }
+    }
+
+    private func debugLog(_ message: String) {
+        print("[MJPEGStream] \(message)")
     }
 
     private func parseBufferIntoJPEGFrames() {
@@ -183,10 +189,16 @@ extension MJPEGStreamService: URLSessionDataDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse) async -> URLSession.ResponseDisposition {
         _ = session
         _ = dataTask
+        if let http = response as? HTTPURLResponse {
+            debugLog("connected status=\(http.statusCode)")
+        } else {
+            debugLog("connected with non-http response")
+        }
         processingQueue.async { [weak self] in
             guard let self else { return }
             self.buffer.removeAll(keepingCapacity: true)
             self.boundaryMarker = self.extractBoundaryMarker(from: response)
+            self.debugLog("boundary parser enabled=\(self.boundaryMarker != nil)")
         }
         return .allow
     }
@@ -207,8 +219,11 @@ extension MJPEGStreamService: URLSessionDataDelegate {
         self.task = nil
 
         // 失敗時僅回傳 nil frame，不 crash、不做激進重試。
-        if error != nil {
+        if let error {
+            debugLog("stream finished with error: \(error.localizedDescription)")
             emit(frame: nil)
+        } else {
+            debugLog("stream finished normally")
         }
     }
 }

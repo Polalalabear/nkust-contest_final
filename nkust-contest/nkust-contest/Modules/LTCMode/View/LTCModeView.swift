@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct LTCModeView: View {
+    @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool
     var onBack: (() -> Void)?
     @State private var viewModel = LTCModeViewModel()
 
     var body: some View {
         ZStack {
-            CameraPreviewPlaceholder()
+            CameraPreviewPlaceholder(frame: viewModel.latestFrame)
 
             VStack(spacing: 12) {
                 ModeHeaderBar(
@@ -39,6 +40,18 @@ struct LTCModeView: View {
 
                 Spacer().frame(height: 30)
             }
+        }
+        .onAppear {
+            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
+        }
+        .onChange(of: appState.dataSourceMode) { _, mode in
+            viewModel.syncStreaming(mode: mode, isConnected: appState.effectiveDeviceConnected)
+        }
+        .onChange(of: appState.effectiveDeviceConnected) { _, connected in
+            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: connected)
+        }
+        .onDisappear {
+            viewModel.stopStreaming()
         }
     }
 

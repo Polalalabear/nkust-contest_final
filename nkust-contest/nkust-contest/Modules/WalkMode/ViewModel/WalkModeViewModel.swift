@@ -71,6 +71,7 @@ final class WalkModeViewModel {
         currentMode = mode
         let shouldUseLiveStream = mode == .live && isConnected
         isUsingLiveStream = shouldUseLiveStream
+        debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected)")
 
         if shouldUseLiveStream {
             startStreamingIfNeeded()
@@ -82,6 +83,7 @@ final class WalkModeViewModel {
 
     func stopStreaming() {
         guard isStreaming else { return }
+        debugLog("stop stream")
         streamService.stop()
         isStreaming = false
     }
@@ -104,6 +106,7 @@ final class WalkModeViewModel {
 
     private func startStreamingIfNeeded() {
         guard !isStreaming else { return }
+        debugLog("start stream")
         streamService.start()
         isStreaming = true
         connectionStatus = "連線中"
@@ -112,6 +115,7 @@ final class WalkModeViewModel {
     private func handleIncomingFrame(_ frame: UIImage?) {
         guard isUsingLiveStream else { return }
         guard let frame else {
+            debugLog("received nil frame")
             connectionStatus = "等待影像中"
             latestFrame = nil
             return
@@ -160,6 +164,10 @@ final class WalkModeViewModel {
         case .safe:
             direction = DirectionInfo(instruction: "保持直行", detail: "路徑暫時安全")
         }
+    }
+
+    private func debugLog(_ message: String) {
+        print("[WalkMode] \(message)")
     }
 
     deinit {
