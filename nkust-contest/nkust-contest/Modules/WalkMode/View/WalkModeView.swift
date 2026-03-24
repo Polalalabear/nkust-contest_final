@@ -8,8 +8,14 @@ struct WalkModeView: View {
     @State private var viewModel = WalkModeViewModel()
 
     var body: some View {
+        @Bindable var state = appState
         ZStack {
             CameraPreviewPlaceholder(frame: viewModel.latestFrame)
+            if appState.showWalkDebugGrid {
+                WalkDebugGridOverlay(highlightedCell: viewModel.highlightedGridCell)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
 
             VStack(spacing: 12) {
                 ModeHeaderBar(
@@ -29,6 +35,18 @@ struct WalkModeView: View {
 
                 Spacer()
 
+                Toggle("顯示九宮格偵錯", isOn: $state.showWalkDebugGrid)
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(.black.opacity(0.45))
+                            .stroke(.white.opacity(0.25), lineWidth: 1)
+                    )
+                    .tint(.green)
+                    .padding(.horizontal, 20)
+
                 SwipeHintBar(
                     leftHint: AppMode.walkMode.swipeHint.left,
                     rightHint: AppMode.walkMode.swipeHint.right
@@ -39,6 +57,7 @@ struct WalkModeView: View {
         .onAppear {
             viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
             viewModel.refreshNavigation(voiceEnabled: isVoiceEnabled)
+            print("[WalkDebugGrid] overlay \(appState.showWalkDebugGrid ? "enabled" : "disabled")")
         }
         .onChange(of: appState.dataSourceMode) { _, mode in
             viewModel.syncStreaming(mode: mode, isConnected: appState.effectiveDeviceConnected)
@@ -48,6 +67,9 @@ struct WalkModeView: View {
         }
         .onChange(of: isVoiceEnabled) { _, newValue in
             viewModel.refreshNavigation(voiceEnabled: newValue)
+        }
+        .onChange(of: appState.showWalkDebugGrid) { _, enabled in
+            print("[WalkDebugGrid] overlay \(enabled ? "enabled" : "disabled")")
         }
         .onDisappear {
             viewModel.stopStreaming()
@@ -84,6 +106,33 @@ struct WalkModeView: View {
             subtitle: viewModel.trafficLight.instruction
         ) {
             Image(systemName: "traffic.light.fill")
+        }
+    }
+}
+
+private struct WalkDebugGridOverlay: View {
+    let highlightedCell: WalkModeViewModel.GridCell?
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let height = geo.size.height
+            let cellWidth = width / 3
+            let cellHeight = height / 3
+            ZStack {
+                ForEach(0..<3, id: \.self) { row in
+                    ForEach(0..<3, id: \.self) { col in
+                        Rectangle()
+                            .stroke(.white.opacity(0.22), lineWidth: 0.8)
+                            .background(
+                                Rectangle()
+                                    .fill(highlightedCell?.row == row && highlightedCell?.col == col ? .green.opacity(0.20) : .clear)
+                            )
+                            .frame(width: cellWidth, height: cellHeight)
+                            .position(x: cellWidth * (CGFloat(col) + 0.5), y: cellHeight * (CGFloat(row) + 0.5))
+                    }
+                }
+            }
         }
     }
 }

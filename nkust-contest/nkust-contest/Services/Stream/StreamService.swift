@@ -1,8 +1,16 @@
 import Foundation
 import UIKit
 
+enum StreamHealthState: String, Equatable {
+    case disconnected
+    case connecting
+    case connected
+    case stale
+}
+
 protocol StreamService: AnyObject {
     var onFrame: ((UIImage?) -> Void)? { get set }
+    var onHealthChange: ((StreamHealthState) -> Void)? { get set }
     func start()
     func stop()
 }
@@ -29,14 +37,16 @@ enum StreamServiceFactory {
 
 final class MockStreamService: StreamService {
     var onFrame: ((UIImage?) -> Void)?
+    var onHealthChange: ((StreamHealthState) -> Void)?
 
     func start() {
         // 開發階段仍走 mock，避免誤連真機。
+        onHealthChange?(.connected)
         onFrame?(nil)
     }
 
     func stop() {
-        // no-op
+        onHealthChange?(.disconnected)
     }
 }
 
@@ -44,22 +54,35 @@ final class MockStreamService: StreamService {
 /// 注意：依階段規則，預設不會被 `StreamServiceFactory.makeDefault()` 啟用。
 final class MJPEGStreamService: NSObject, StreamService {
     var onFrame: ((UIImage?) -> Void)?
+    var onHealthChange: ((StreamHealthState) -> Void)?
 
     private let streamURL: URL
+    private let staleTimeout: TimeInterval
     private var session: URLSession?
     private var task: URLSessionDataTask?
     private let processingQueue = DispatchQueue(label: "mjpeg.stream.processing", qos: .utility)
     private var buffer = Data()
     private var boundaryMarker: Data?
     private let maxBufferBytes = 2_000_000
+    private var lastFrameAt: Date?
+    private var stateSinceAt: Date = Date()
+    private var streamHealthState: StreamHealthState = .disconnected
+    private var healthTimer: DispatchSourceTimer?
+    private var didReceiveFirstFrame = false
 
-    init(url: URL = URL(string: "http://192.168.4.1/stream")!) {
+    init(
+        url: URL = URL(string: "http://192.168.4.1/stream")!,
+        staleTimeout: TimeInterval = 2.5
+    ) {
         self.streamURL = url
+        self.staleTimeout = staleTimeout
     }
 
     func start() {
         guard task == nil else { return }
         debugLog("start stream request \(streamURL.absoluteString)")
+        transition(to: .connecting, reason: "start() invoked")
+        startHealthMonitorIfNeeded()
 
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 15
@@ -78,9 +101,13 @@ final class MJPEGStreamService: NSObject, StreamService {
         task = nil
         session?.invalidateAndCancel()
         session = nil
+        stopHealthMonitor()
+        transition(to: .disconnected, reason: "stop() invoked")
         processingQueue.async { [weak self] in
             self?.buffer.removeAll(keepingCapacity: false)
             self?.boundaryMarker = nil
+            self?.lastFrameAt = nil
+            self?.didReceiveFirstFrame = false
         }
     }
 
@@ -92,6 +119,55 @@ final class MJPEGStreamService: NSObject, StreamService {
 
     private func debugLog(_ message: String) {
         print("[MJPEGStream] \(message)")
+    }
+
+    private func connectionLog(_ message: String) {
+        print("[ConnectionState] \(message)")
+    }
+
+    private func transition(to newState: StreamHealthState, reason: String) {
+        guard newState != streamHealthState else { return }
+        let previous = streamHealthState
+        streamHealthState = newState
+        stateSinceAt = Date()
+        connectionLog("stream health transition \(previous.rawValue) -> \(newState.rawValue) (\(reason))")
+        DispatchQueue.main.async { [weak self] in
+            self?.onHealthChange?(newState)
+        }
+    }
+
+    private func startHealthMonitorIfNeeded() {
+        guard healthTimer == nil else { return }
+        let timer = DispatchSource.makeTimerSource(queue: processingQueue)
+        timer.schedule(deadline: .now() + 0.5, repeating: 0.5)
+        timer.setEventHandler { [weak self] in
+            self?.checkStreamStaleness()
+        }
+        healthTimer = timer
+        timer.resume()
+    }
+
+    private func stopHealthMonitor() {
+        healthTimer?.cancel()
+        healthTimer = nil
+    }
+
+    private func checkStreamStaleness() {
+        guard task != nil else { return }
+        let now = Date()
+        if let lastFrameAt {
+            let elapsed = now.timeIntervalSince(lastFrameAt)
+            if elapsed > staleTimeout {
+                debugLog("timeout stale elapsed=\(String(format: "%.2f", elapsed))s")
+                transition(to: .stale, reason: "frame timeout > \(String(format: "%.1f", staleTimeout))s")
+            }
+            return
+        }
+
+        if now.timeIntervalSince(stateSinceAt) > staleTimeout {
+            debugLog("timeout stale while connecting")
+            transition(to: .stale, reason: "connecting timeout > \(String(format: "%.1f", staleTimeout))s")
+        }
     }
 
     private func parseBufferIntoJPEGFrames() {
@@ -123,6 +199,9 @@ final class MJPEGStreamService: NSObject, StreamService {
             let frameEnd = buffer.index(endRange.lowerBound, offsetBy: jpegEnd.count)
             let frameData = buffer[startRange.lowerBound..<frameEnd]
             let image = UIImage(data: frameData)
+            if image != nil {
+                didReceiveValidFrame()
+            }
             emit(frame: image)
 
             buffer.removeSubrange(0..<frameEnd)
@@ -148,6 +227,7 @@ final class MJPEGStreamService: NSObject, StreamService {
             let partData = Data(buffer[partStart..<nextBoundary.lowerBound])
             if let jpeg = extractJPEG(fromMultipartPart: partData),
                let image = UIImage(data: jpeg) {
+                didReceiveValidFrame()
                 emit(frame: image)
             }
 
@@ -182,6 +262,16 @@ final class MJPEGStreamService: NSObject, StreamService {
         if buffer.count > maxBufferBytes {
             buffer.removeAll(keepingCapacity: true)
         }
+    }
+
+    private func didReceiveValidFrame() {
+        let now = Date()
+        lastFrameAt = now
+        if !didReceiveFirstFrame {
+            didReceiveFirstFrame = true
+            debugLog("first frame received")
+        }
+        transition(to: .connected, reason: "valid frame received")
     }
 }
 
@@ -221,10 +311,53 @@ extension MJPEGStreamService: URLSessionDataDelegate {
         // 失敗時僅回傳 nil frame，不 crash、不做激進重試。
         if let error {
             debugLog("stream finished with error: \(error.localizedDescription)")
+            transition(to: .disconnected, reason: "didCompleteWithError")
             emit(frame: nil)
         } else {
             debugLog("stream finished normally")
+            transition(to: .disconnected, reason: "stream ended")
         }
+    }
+}
+
+@MainActor
+final class StreamHealthCoordinator {
+    var onStateChange: ((StreamHealthState) -> Void)?
+
+    private let monitorService: StreamService
+    private var isMonitoring = false
+    private var currentState: StreamHealthState = .disconnected
+
+    init(monitorService: StreamService = MJPEGStreamService()) {
+        self.monitorService = monitorService
+        self.monitorService.onHealthChange = { [weak self] state in
+            Task { @MainActor [weak self] in
+                self?.apply(state: state)
+            }
+        }
+    }
+
+    func startMonitoring() {
+        guard !isMonitoring else { return }
+        isMonitoring = true
+        print("[ConnectionState] coordinator start monitoring")
+        monitorService.start()
+    }
+
+    func stopMonitoring() {
+        guard isMonitoring else { return }
+        isMonitoring = false
+        print("[ConnectionState] coordinator stop monitoring")
+        monitorService.stop()
+        apply(state: .disconnected)
+    }
+
+    private func apply(state: StreamHealthState) {
+        guard state != currentState else { return }
+        let old = currentState
+        currentState = state
+        print("[ConnectionState] coordinator transition \(old.rawValue) -> \(state.rawValue)")
+        onStateChange?(state)
     }
 }
 

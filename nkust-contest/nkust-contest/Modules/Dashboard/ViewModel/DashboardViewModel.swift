@@ -100,8 +100,6 @@ final class DashboardViewModel {
             chartDetailRecords = DailyHealthRecord.mockThreeMonths()
 
         case .live:
-            // Firebase 暫停：強制走本地連線狀態，避免串流受雲端連線阻塞。
-            appState.liveModeDeviceConnected = true
             FirestoreDashboardSnapshotService.shared.stopListening()
             appState.liveFirestoreSnapshot = nil
             do {

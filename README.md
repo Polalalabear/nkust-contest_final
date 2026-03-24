@@ -68,11 +68,11 @@ View → ViewModel → Service → Engine
 | `mock`（測試資料） | 健康曲線為記憶體假資料；可開關「模擬裝置已連線」 |
 | `live`（真實資料） | Firestore 監聽 + SwiftData 讀寫合併；未連上或 `connected == false` → **尚未連線** |
 
-> `AppState.effectiveDeviceConnected` 已同時提供給照護者與視障者 UI（如 DeviceInfo / Walk / Recognition / LTC 狀態列）使用。
+> `AppState.effectiveDeviceConnected` 已同時提供給照護者與視障者 UI（如 DeviceInfo / Walk / Recognition / LTC 狀態列）使用；在 `live` 模式下，狀態改由 MJPEG 串流健康度推導（僅 `connected` 視為已連線）。
 
 ### 與 ESP32 相機串流（必讀）
 
-`/docs/device-connection.md`：目前 `StreamDevelopmentPhase.current` 已允許 `MJPEGStreamService`，但仍由上層以 `DataSourceMode.live && effectiveDeviceConnected` 決定是否啟用實際串流；`mock` 模式仍只走 Mock 行為。Firestore 與 MJPEG 為不同資料路徑。
+`/docs/device-connection.md`：目前 `StreamDevelopmentPhase.current` 已允許 `MJPEGStreamService`，並由 `StreamHealthCoordinator` 監測串流健康度（`disconnected` / `connecting` / `connected` / `stale`）；上層仍以 `DataSourceMode.live && effectiveDeviceConnected` 決定是否啟用實際串流畫面。`mock` 模式仍只走 Mock 行為。Firestore 與 MJPEG 為不同資料路徑。
 
 ---
 
@@ -141,10 +141,22 @@ nkust-contest/nkust-contest/
 - 失敗策略：`didCompleteWithError` 僅送 `nil frame`，不 crash、不激進重試（符合 `/docs/device-connection.md`）。
 - Console 偵錯重點（可在 Xcode Console 觀察）：
   - `[MJPEGStream] start stream request ...`
+  - `[MJPEGStream] first frame received`
+  - `[MJPEGStream] timeout stale ...`
+  - `[MJPEGStream] stop stream request`
   - `[MJPEGStream] connected status=...`
   - `[MJPEGStream] boundary parser enabled=true/false`
+  - `[ConnectionState] ...`（健康狀態轉移）
   - `[WalkMode] ...` / `[RecognitionMode] ...` / `[LTCMode] ...`（模式層串流同步）
+  - `[WalkDebugGrid] ...`（九宮格開關與 bbox 對應 cell）
   - `[MainTab] ...`（模式切換與循環跳轉）
+
+## Walk 九宮格 Debug Overlay
+
+- 位置：`WalkModeView` 相機畫面上方（3x3 半透明細線）。
+- 開關：`AppState.showWalkDebugGrid`（目前預設 `false`），Walk 畫面內可直接切換「顯示九宮格偵錯」。
+- bbox 對應：若模型回傳 bounding box 中心點，會高亮命中格並輸出 `[WalkDebugGrid] mapped bbox center ... row=... col=...`。
+- 無障礙：九宮格 overlay 設為 `accessibilityHidden(true)` 且不接收觸控事件，不會被 VoiceOver 當成互動元件。
 
 ## 持久化初始化安全（CoreData/SwiftData）
 
@@ -193,6 +205,14 @@ nkust-contest/nkust-contest/
 2. 進入照護者主控台，切到「真實資料」模式（`DataSourceMode.live`）。
 3. 進入視障者 `Walk` / `Recognition` / `LTC`，確認畫面背景會更新為 ESP32 frame；若來源暫時中斷，應顯示 placeholder 並可在 Console 看到 `received nil frame` log。
 4. 若切回「測試資料」模式（`mock`），串流應立即停止（只走 Mock）。
+5. 在 `live` 模式觀察 `ConnectionState`：應有 `connecting -> connected`，若中斷超過約 2.5 秒應轉為 `stale`，停止監測時轉 `disconnected`。
+
+### 1-1) Walk 九宮格 Overlay 驗證
+
+1. 進入 Walk 模式後開啟「顯示九宮格偵錯」。
+2. 確認畫面出現半透明 3x3 格線，且不遮擋主要方向/提示卡片。
+3. 若模型有 bbox 中心點，確認 Console 輸出 `[WalkDebugGrid] mapped bbox center ...` 與對應格子高亮。
+4. 關閉開關後，Console 需輸出 `[WalkDebugGrid] overlay disabled` 且格線消失。
 
 ### 2) CoreML 模型是否真的被使用
 

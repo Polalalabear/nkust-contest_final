@@ -14,8 +14,14 @@ final class AppState {
 
     /// 真實資料模式：Firestore `dashboard/caregiver_primary` 最新快照（nil = 尚未取得或監聽停止）
     var liveFirestoreSnapshot: FirestoreDashboardSnapshot?
-    /// Firebase 暫停期間的本地連線回退狀態（可由 UI/流程直接控制）
-    var liveModeDeviceConnected: Bool = true
+    /// 真實資料模式：由 MJPEG 串流健康度推導的連線狀態
+    var liveStreamHealthState: StreamHealthState = .disconnected {
+        didSet {
+            guard oldValue != liveStreamHealthState else { return }
+            print("[ConnectionState] app state transition \(oldValue.rawValue) -> \(liveStreamHealthState.rawValue)")
+        }
+    }
+    var showWalkDebugGrid: Bool = false
 
     var dataSourceMode: DataSourceMode = .mock
 
@@ -47,7 +53,7 @@ final class AppState {
         case .mock:
             return mockDeviceConnected
         case .live:
-            return liveModeDeviceConnected
+            return liveStreamHealthState == .connected
         }
     }
 

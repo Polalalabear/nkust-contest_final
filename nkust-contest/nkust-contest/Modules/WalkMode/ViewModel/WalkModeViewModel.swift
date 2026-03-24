@@ -5,6 +5,11 @@ import UIKit
 @MainActor
 @Observable
 final class WalkModeViewModel {
+    struct GridCell: Equatable {
+        let row: Int
+        let col: Int
+    }
+
     var obstacle: ObstacleInfo = .mock
     var direction: DirectionInfo = .turnRight
     var trafficLight: TrafficLightInfo = .none
@@ -14,6 +19,7 @@ final class WalkModeViewModel {
     var isUsingLiveStream: Bool = false
     var lastFrameReceivedAt: Date?
     var latestFrame: UIImage?
+    var highlightedGridCell: GridCell?
 
     private let service: WalkModeServicing
     private let mockAIService: AIService
@@ -142,6 +148,11 @@ final class WalkModeViewModel {
                 } else {
                     self.trafficLight = .none
                 }
+                if let center = result.obstacleCenterNormalized {
+                    self.highlightedGridCell = self.mapToGridCell(center: center)
+                } else {
+                    self.highlightedGridCell = nil
+                }
                 self.lastDecision = self.service.evaluateNavigation(
                     context: self.buildContext(),
                     voiceEnabled: self.isVoiceFeedbackEnabled
@@ -168,6 +179,15 @@ final class WalkModeViewModel {
 
     private func debugLog(_ message: String) {
         print("[WalkMode] \(message)")
+    }
+
+    private func mapToGridCell(center: CGPoint) -> GridCell {
+        let clampedX = min(max(center.x, 0), 0.9999)
+        let clampedY = min(max(1 - center.y, 0), 0.9999)
+        let col = Int(clampedX * 3)
+        let row = Int(clampedY * 3)
+        print("[WalkDebugGrid] mapped bbox center (\(String(format: "%.2f", center.x)), \(String(format: "%.2f", center.y))) to row=\(row) col=\(col)")
+        return GridCell(row: row, col: col)
     }
 
     deinit {

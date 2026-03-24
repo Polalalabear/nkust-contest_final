@@ -786,3 +786,35 @@ It is a **machine-readable development log**
 
 **Notes**
 - This change keeps existing architecture boundaries (View/ViewModel/Service) and does not introduce new dependencies
+
+---
+
+### [2026-03-24 17:45]
+
+**Feature**
+- Replace live connection fallback flag with MJPEG stream health state machine (`disconnected` / `connecting` / `connected` / `stale`) and route `effectiveDeviceConnected` to health-derived status
+- Add centralized `StreamHealthCoordinator` for visually-impaired live flow preflight monitoring (DeviceInfo/Main flow gating now follows real stream health)
+- Add Walk mode debug 3x3 grid overlay toggle (`AppState.showWalkDebugGrid`) with optional bbox-to-cell highlight and debug logs
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+- /nkust-contest/nkust-contest/State/AppState.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /README.md
+
+**State Changes**
+- Added global stream health enum and service callback (`onHealthChange`) with transition logs
+- `AppState.effectiveDeviceConnected` in `live` now returns true only when `liveStreamHealthState == .connected`
+- Added `showWalkDebugGrid` app-level debug flag and Walk overlay cell-highlight state derived from model bbox center
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Build required elevated permissions due SPM checkout/git-hooks writes in this environment
+- Walk cell highlight appears only when model output includes bounding-box center; otherwise overlay shows static 3x3 grid

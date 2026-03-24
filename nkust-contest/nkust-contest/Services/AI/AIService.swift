@@ -7,12 +7,14 @@ struct LocalResult {
     let confidence: Double
     let estimatedObstacleDistanceMeters: Int?
     let trafficLightRed: Bool?
+    let obstacleCenterNormalized: CGPoint?
 
     static let mock = LocalResult(
         hasObstacle: false,
         confidence: 0,
         estimatedObstacleDistanceMeters: nil,
-        trafficLightRed: nil
+        trafficLightRed: nil,
+        obstacleCenterNormalized: nil
     )
 }
 
@@ -115,7 +117,8 @@ final class CoreMLModelRuntime {
                 hasObstacle: false,
                 confidence: 0,
                 estimatedObstacleDistanceMeters: nil,
-                trafficLightRed: nil
+                trafficLightRed: nil,
+                obstacleCenterNormalized: nil
             )
         }
 
@@ -125,7 +128,8 @@ final class CoreMLModelRuntime {
             hasObstacle: confidence >= 0.35,
             confidence: confidence,
             estimatedObstacleDistanceMeters: estimatedDistance,
-            trafficLightRed: nil
+            trafficLightRed: nil,
+            obstacleCenterNormalized: nearest.center
         )
     }
 
@@ -185,7 +189,11 @@ final class CoreMLModelRuntime {
 
                 if let objects = request.results as? [VNRecognizedObjectObservation] {
                     let mapped = objects.map {
-                        DetectionCandidate(confidence: Double($0.confidence), area: $0.boundingBox.area)
+                        DetectionCandidate(
+                            confidence: Double($0.confidence),
+                            area: $0.boundingBox.area,
+                            center: CGPoint(x: $0.boundingBox.midX, y: $0.boundingBox.midY)
+                        )
                     }
                     continuation.resume(returning: mapped)
                     return
@@ -193,7 +201,7 @@ final class CoreMLModelRuntime {
 
                 if let classifications = request.results as? [VNClassificationObservation] {
                     let mapped = classifications.map { item in
-                        DetectionCandidate(confidence: Double(item.confidence), area: 0.08)
+                        DetectionCandidate(confidence: Double(item.confidence), area: 0.08, center: nil)
                     }
                     continuation.resume(returning: mapped)
                     return
@@ -245,4 +253,5 @@ private extension CGRect {
 private struct DetectionCandidate {
     let confidence: Double
     let area: CGFloat
+    let center: CGPoint?
 }
