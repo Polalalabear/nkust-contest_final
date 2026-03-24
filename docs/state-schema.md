@@ -125,6 +125,35 @@ It MUST be updated automatically by the agent AFTER:
 
 ---
 
+### [2026-03-24 23:57]
+
+**Feature**
+- Preserve caregiver local data-source state across re-entering caregiver dashboard flow (no forced reset to `mock` on each entry)
+- Stop ongoing voice playback immediately when leaving visually-impaired screens or switching modes
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/State/AppState.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/Modules/MainTab/View/MainTabView.swift
+- /nkust-contest/nkust-contest/Modules/DeviceInfo/View/DeviceInfoView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+- /nkust-contest/nkust-contest/Modules/LTCMode/View/LTCModeView.swift
+- /README.md
+
+**State Changes**
+- Added `AppState.hasHydratedCaregiverSettings` to ensure persisted caregiver settings are applied once per app runtime, preventing repeated overrides on every caregiver re-entry
+- Added `VoiceAnnouncementCenter.shared.stopAll()` on visually-impaired flow screen disappear points so narration is interrupted immediately on mode/route transition
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- This change does not alter mock/live business rules; it only prevents unintended mode reset timing and cross-screen speech carry-over
+
+---
+
 ## Update Rules (STRICT)
 
 Every update MUST:

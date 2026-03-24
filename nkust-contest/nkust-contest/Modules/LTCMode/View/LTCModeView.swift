@@ -53,6 +53,7 @@ struct LTCModeView: View {
         }
         .onDisappear {
             viewModel.stopStreaming()
+            VoiceAnnouncementCenter.shared.stopAll()
         }
     }
 

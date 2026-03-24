@@ -63,6 +63,7 @@ struct DeviceInfoView: View {
         }
         .onDisappear {
             ConnectionStatusAnnouncer.shared.stopReminders(screenID: "device_info")
+            VoiceAnnouncementCenter.shared.stopAll()
         }
     }
 

@@ -55,6 +55,7 @@ struct MainTabView: View {
         .onDisappear {
             pendingWrapTask?.cancel()
             pendingWrapTask = nil
+            VoiceAnnouncementCenter.shared.stopAll()
         }
     }
 

@@ -24,6 +24,8 @@ final class AppState {
     var showWalkDebugGrid: Bool = false
     /// 照護者可調整：超過此距離的目標不觸發導航警示
     var modelAlertDistanceMeters: Int = 10
+    /// Avoid overriding runtime-selected mode every caregiver re-entry.
+    var hasHydratedCaregiverSettings: Bool = false
 
     var dataSourceMode: DataSourceMode = .mock
 
