@@ -4,60 +4,60 @@ import SwiftUI
 @MainActor
 struct AppRouter: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.modelContext) private var modelContext
     @State private var showMainFlow = false
     @State private var streamHealthCoordinator = StreamHealthCoordinator()
     @State private var isBootstrapping = true
-    @State private var hasBootstrapped = false
+    @State private var didBootstrap = false
+    @State private var didApplyBootstrappedSettings = false
+    @State private var pendingMonitorTask: Task<Void, Never>?
 
     var body: some View {
         @Bindable var state = appState
         ZStack {
-            if let role = appState.userRole {
-                switch role {
-                case .visuallyImpaired:
-                    if showMainFlow {
-                        MainTabView(onBack: {
-                            showMainFlow = false
-                        })
-                    } else {
-                        DeviceInfoView(
-                            isVoiceEnabled: $state.isVoiceEnabled,
-                            onBack: { appState.userRole = nil },
-                            onStart: {
-                                if appState.effectiveDeviceConnected {
-                                    showMainFlow = true
+            Group {
+                if let role = appState.userRole {
+                    switch role {
+                    case .visuallyImpaired:
+                        if showMainFlow {
+                            MainTabView(onBack: {
+                                showMainFlow = false
+                            })
+                        } else {
+                            DeviceInfoView(
+                                isVoiceEnabled: $state.isVoiceEnabled,
+                                onBack: { appState.userRole = nil },
+                                onStart: {
+                                    if appState.effectiveDeviceConnected {
+                                        showMainFlow = true
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
+                    case .caregiver:
+                        CaregiverRootContainer(onBack: { appState.userRole = nil })
                     }
-                case .caregiver:
-                    DashboardView(onBack: { appState.userRole = nil })
+                } else {
+                    ChooseUserView(isVoiceEnabled: $state.isVoiceEnabled)
                 }
-            } else {
-                ChooseUserView(isVoiceEnabled: $state.isVoiceEnabled)
             }
 
             if isBootstrapping {
-                LaunchLoadingView()
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
+                launchOverlay
             }
         }
         .animation(.easeInOut, value: appState.userRole)
         .animation(.easeInOut, value: showMainFlow)
-        .animation(.easeInOut(duration: 0.2), value: isBootstrapping)
         .onChange(of: appState.effectiveDeviceConnected) { _, connected in
             if !connected {
                 showMainFlow = false
             }
         }
         .onAppear {
+            StartupTrace.log("AppStartup", "AppRouter onAppear")
             streamHealthCoordinator.onStateChange = { state in
                 appState.liveStreamHealthState = state
             }
             syncLiveMonitoring()
-            startBootstrapIfNeeded()
         }
         .onChange(of: appState.userRole) { _, _ in
             syncLiveMonitoring()
@@ -68,81 +68,119 @@ struct AppRouter: View {
         .onChange(of: showMainFlow) { _, _ in
             syncLiveMonitoring()
         }
-    }
-
-    @MainActor
-    private func bootstrapPersistence() async {
-        print("[AppStartup] bootstrap persistence begin")
-        do {
-            if let settings = try AppSettingsPersistence.loadIfExists(in: modelContext) {
-                AppSettingsPersistence.apply(settings: settings, to: appState)
-                print("[AppStartup] bootstrap settings applied")
-            } else {
-                print("[AppStartup] bootstrap no persisted settings")
-            }
-        } catch {
-            print("[AppStartup] bootstrap failed: \(error.localizedDescription)")
+        .onDisappear {
+            pendingMonitorTask?.cancel()
+            pendingMonitorTask = nil
         }
-        print("[AppStartup] bootstrap persistence end")
+        .task {
+            if !didBootstrap {
+                didBootstrap = true
+                startBootstrapFlow()
+            }
+        }
     }
 
-    @MainActor
-    private func enterAppAsSoonAsPossible() async {
-        try? await Task.sleep(nanoseconds: 250_000_000)
-        isBootstrapping = false
-        print("[AppStartup] launch overlay dismissed")
-    }
-
-    private func startBootstrapIfNeeded() {
-        guard !hasBootstrapped else { return }
-        hasBootstrapped = true
-        print("[AppStartup] start bootstrap")
-
-        // 保底：即使啟動流程異常，也在 1 秒內放行 UI，不被 loading 永久阻塞。
+    private func startBootstrapFlow() {
+        StartupTrace.log("AppStartup", "start bootstrap")
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            // 啟動畫面最多只阻擋短時間，避免黑屏體感。
+            try? await Task.sleep(nanoseconds: 350_000_000)
             if isBootstrapping {
+                didApplyBootstrappedSettings = true
                 isBootstrapping = false
-                print("[AppStartup] fallback timeout -> dismiss overlay")
-            }
-        }
-
-        Task { @MainActor in
-            await enterAppAsSoonAsPossible()
-            // 先讓使用者進入 App，再做設定回填，避免實機慢速 SwiftData 讀取卡住首屏。
-            Task(priority: .utility) { @MainActor in
-                await bootstrapPersistence()
+                StartupTrace.log("AppStartup", "launch overlay dismissed by timeout")
+                syncLiveMonitoring()
             }
         }
     }
 
     private func syncLiveMonitoring() {
-        let shouldMonitor = appState.userRole == .visuallyImpaired && appState.dataSourceMode == .live
+        let shouldMonitor = canStartLiveMonitoring
+        StartupTrace.log(
+            "ConnectionState",
+            "syncLiveMonitoring shouldMonitor=\(shouldMonitor) role=\(String(describing: appState.userRole)) mode=\(appState.dataSourceMode.rawValue) showMainFlow=\(showMainFlow) bootstrapping=\(isBootstrapping)"
+        )
         if shouldMonitor {
-            streamHealthCoordinator.startMonitoring()
+            pendingMonitorTask?.cancel()
+            pendingMonitorTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                guard canStartLiveMonitoring else { return }
+                streamHealthCoordinator.startMonitoring()
+            }
         } else {
+            pendingMonitorTask?.cancel()
+            pendingMonitorTask = nil
             streamHealthCoordinator.stopMonitoring()
-            appState.liveStreamHealthState = .disconnected
+            if appState.dataSourceMode != .live || appState.userRole != .visuallyImpaired {
+                appState.liveStreamHealthState = .disconnected
+            }
         }
+    }
+
+    private var canStartLiveMonitoring: Bool {
+        appState.userRole == .visuallyImpaired
+            && appState.dataSourceMode == .live
+            && !showMainFlow
+            && didApplyBootstrappedSettings
+            && !isBootstrapping
+    }
+
+    private var launchOverlay: some View {
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+            VStack(spacing: 12) {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                Text("啟動中...")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .transition(.opacity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("啟動中")
     }
 }
 
-private struct LaunchLoadingView: View {
+@MainActor
+private struct CaregiverRootContainer: View {
+    let onBack: () -> Void
+
     var body: some View {
-        ZStack {
-            Color(white: 0.12)
-                .ignoresSafeArea()
-            VStack(spacing: 16) {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(.white)
-                Text("載入中...")
-                    .font(.headline)
-                    .foregroundStyle(.white.opacity(0.92))
+        CaregiverDashboardHost(onBack: onBack)
+            .modelContainer(
+                for: [PersistedAppSettings.self, PersistedHealthDayRecordEntity.self],
+                inMemory: false
+            )
+    }
+}
+
+@MainActor
+private struct CaregiverDashboardHost: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
+    let onBack: () -> Void
+    @State private var didLoadPersistedSettings = false
+
+    var body: some View {
+        DashboardView(onBack: onBack)
+            .task {
+                if !didLoadPersistedSettings {
+                    didLoadPersistedSettings = true
+                    loadPersistedSettings()
+                }
             }
+    }
+
+    private func loadPersistedSettings() {
+        StartupTrace.log("AppStartup", "caregiver persistence load begin")
+        do {
+            let settings = try AppSettingsPersistence.loadOrCreateSettings(in: modelContext)
+            AppSettingsPersistence.apply(settings: settings, to: appState)
+            StartupTrace.log("AppStartup", "caregiver persistence load end")
+        } catch {
+            StartupTrace.log("AppStartup", "caregiver persistence load failed")
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("應用程式載入中")
     }
 }
 

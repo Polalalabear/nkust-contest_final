@@ -18,7 +18,7 @@ final class AppState {
     var liveStreamHealthState: StreamHealthState = .disconnected {
         didSet {
             guard oldValue != liveStreamHealthState else { return }
-            print("[ConnectionState] app state transition \(oldValue.rawValue) -> \(liveStreamHealthState.rawValue)")
+            StartupTrace.log("ConnectionState", "app state transition \(oldValue.rawValue) -> \(liveStreamHealthState.rawValue)")
         }
     }
     var showWalkDebugGrid: Bool = false

@@ -96,6 +96,7 @@ final class MJPEGStreamService: NSObject, StreamService {
     }
 
     func stop() {
+        guard task != nil || session != nil || healthTimer != nil else { return }
         debugLog("stop stream request")
         task?.cancel()
         task = nil
@@ -118,11 +119,11 @@ final class MJPEGStreamService: NSObject, StreamService {
     }
 
     private func debugLog(_ message: String) {
-        print("[MJPEGStream] \(message)")
+        StartupTrace.log("MJPEGStream", message)
     }
 
     private func connectionLog(_ message: String) {
-        print("[ConnectionState] \(message)")
+        StartupTrace.log("ConnectionState", message)
     }
 
     private func transition(to newState: StreamHealthState, reason: String) {
@@ -290,6 +291,7 @@ extension MJPEGStreamService: URLSessionDataDelegate {
             self.boundaryMarker = self.extractBoundaryMarker(from: response)
             self.debugLog("boundary parser enabled=\(self.boundaryMarker != nil)")
         }
+        debugLog("didReceive response handled")
         return .allow
     }
 
@@ -340,14 +342,14 @@ final class StreamHealthCoordinator {
     func startMonitoring() {
         guard !isMonitoring else { return }
         isMonitoring = true
-        print("[ConnectionState] coordinator start monitoring")
+        StartupTrace.log("ConnectionState", "coordinator start monitoring")
         monitorService.start()
     }
 
     func stopMonitoring() {
         guard isMonitoring else { return }
         isMonitoring = false
-        print("[ConnectionState] coordinator stop monitoring")
+        StartupTrace.log("ConnectionState", "coordinator stop monitoring")
         monitorService.stop()
         apply(state: .disconnected)
     }
@@ -356,7 +358,7 @@ final class StreamHealthCoordinator {
         guard state != currentState else { return }
         let old = currentState
         currentState = state
-        print("[ConnectionState] coordinator transition \(old.rawValue) -> \(state.rawValue)")
+        StartupTrace.log("ConnectionState", "coordinator transition \(old.rawValue) -> \(state.rawValue)")
         onStateChange?(state)
     }
 }
