@@ -818,3 +818,26 @@ It is a **machine-readable development log**
 **Notes**
 - Build required elevated permissions due SPM checkout/git-hooks writes in this environment
 - Walk cell highlight appears only when model output includes bounding-box center; otherwise overlay shows static 3x3 grid
+
+---
+
+### [2026-03-24 18:44]
+
+**Feature**
+- Fix startup loading stall on real device by changing bootstrap order to dismiss launch overlay first, then restore persisted settings
+- Update README development status to document the non-blocking startup flow
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /README.md
+
+**State Changes**
+- App launch bootstrap sequence is now: start bootstrap -> dismiss loading overlay ASAP -> run SwiftData settings restore in background task
+- This prevents slow SwiftData first-read on device from blocking launch loading dismissal
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Build in this environment requires elevated permissions due external cache/log access outside workspace

@@ -115,6 +115,7 @@ nkust-contest/nkust-contest/
 - [x] MJPEG parser 強化：支援 `multipart/x-mixed-replace` boundary 解析，並保留 JPEG marker fallback  
 - [x] 視障者三模式（Walk / Recognition / LTC）在 `live` + 已連線時皆可顯示最新 ESP32 frame  
 - [x] SwiftData/CoreData 初始化安全：啟動前先確保 `Application Support` 目錄存在，避免 default.store 建檔失敗  
+- [x] 啟動體驗優化：啟動時先放行主 UI，再背景回填 SwiftData 設定，避免實機首屏 loading 長時間滯留  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 

@@ -7,10 +7,12 @@ struct AppRouter: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showMainFlow = false
     @State private var streamHealthCoordinator = StreamHealthCoordinator()
+    @State private var isBootstrapping = true
+    @State private var hasBootstrapped = false
 
     var body: some View {
         @Bindable var state = appState
-        Group {
+        ZStack {
             if let role = appState.userRole {
                 switch role {
                 case .visuallyImpaired:
@@ -35,9 +37,16 @@ struct AppRouter: View {
             } else {
                 ChooseUserView(isVoiceEnabled: $state.isVoiceEnabled)
             }
+
+            if isBootstrapping {
+                LaunchLoadingView()
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
         }
         .animation(.easeInOut, value: appState.userRole)
         .animation(.easeInOut, value: showMainFlow)
+        .animation(.easeInOut(duration: 0.2), value: isBootstrapping)
         .onChange(of: appState.effectiveDeviceConnected) { _, connected in
             if !connected {
                 showMainFlow = false
@@ -48,6 +57,7 @@ struct AppRouter: View {
                 appState.liveStreamHealthState = state
             }
             syncLiveMonitoring()
+            startBootstrapIfNeeded()
         }
         .onChange(of: appState.userRole) { _, _ in
             syncLiveMonitoring()
@@ -58,19 +68,51 @@ struct AppRouter: View {
         .onChange(of: showMainFlow) { _, _ in
             syncLiveMonitoring()
         }
-        .task {
-            await bootstrapPersistence()
-        }
     }
 
     @MainActor
     private func bootstrapPersistence() async {
+        print("[AppStartup] bootstrap persistence begin")
         do {
-            try HealthRecordsPersistence.seedIfEmpty(in: modelContext)
-            let settings = try AppSettingsPersistence.loadOrCreateSettings(in: modelContext)
-            AppSettingsPersistence.apply(settings: settings, to: appState)
+            if let settings = try AppSettingsPersistence.loadIfExists(in: modelContext) {
+                AppSettingsPersistence.apply(settings: settings, to: appState)
+                print("[AppStartup] bootstrap settings applied")
+            } else {
+                print("[AppStartup] bootstrap no persisted settings")
+            }
         } catch {
-            // 首次啟動或容器異常時仍允許進入 app
+            print("[AppStartup] bootstrap failed: \(error.localizedDescription)")
+        }
+        print("[AppStartup] bootstrap persistence end")
+    }
+
+    @MainActor
+    private func enterAppAsSoonAsPossible() async {
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        isBootstrapping = false
+        print("[AppStartup] launch overlay dismissed")
+    }
+
+    private func startBootstrapIfNeeded() {
+        guard !hasBootstrapped else { return }
+        hasBootstrapped = true
+        print("[AppStartup] start bootstrap")
+
+        // 保底：即使啟動流程異常，也在 1 秒內放行 UI，不被 loading 永久阻塞。
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            if isBootstrapping {
+                isBootstrapping = false
+                print("[AppStartup] fallback timeout -> dismiss overlay")
+            }
+        }
+
+        Task { @MainActor in
+            await enterAppAsSoonAsPossible()
+            // 先讓使用者進入 App，再做設定回填，避免實機慢速 SwiftData 讀取卡住首屏。
+            Task(priority: .utility) { @MainActor in
+                await bootstrapPersistence()
+            }
         }
     }
 
@@ -82,6 +124,25 @@ struct AppRouter: View {
             streamHealthCoordinator.stopMonitoring()
             appState.liveStreamHealthState = .disconnected
         }
+    }
+}
+
+private struct LaunchLoadingView: View {
+    var body: some View {
+        ZStack {
+            Color(white: 0.12)
+                .ignoresSafeArea()
+            VStack(spacing: 16) {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(.white)
+                Text("載入中...")
+                    .font(.headline)
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("應用程式載入中")
     }
 }
 
