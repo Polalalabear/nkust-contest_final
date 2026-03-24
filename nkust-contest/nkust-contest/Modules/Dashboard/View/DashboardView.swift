@@ -35,6 +35,7 @@ struct SummaryView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel = DashboardViewModel()
     @State private var showProfile = false
+    @State private var showLocationCopiedAlert = false
     var onBack: (() -> Void)?
 
     var body: some View {
@@ -132,7 +133,13 @@ struct SummaryView: View {
                     .preferredColorScheme(appState.isDarkMode ? .dark : .light)
             }
             .onAppear {
+                StartupTrace.log("DashboardLoad", "SummaryView onAppear")
                 viewModel.syncDataSource(mode: appState.dataSourceMode, appState: appState, modelContext: modelContext)
+            }
+            .alert("已複製位置", isPresented: $showLocationCopiedAlert) {
+                Button("確定", role: .cancel) {}
+            } message: {
+                Text("已複製地址與經緯度。")
             }
             .onChange(of: appState.dataSourceMode) { _, newMode in
                 viewModel.syncDataSource(mode: newMode, appState: appState, modelContext: modelContext)
@@ -240,7 +247,12 @@ struct SummaryView: View {
     private var actionButtons: some View {
         VStack(spacing: 12) {
             Button {
-                viewModel.fetchVisUserLocation()
+                Task {
+                    let didCopy = await viewModel.copyVisUserLocation(appState: appState)
+                    if didCopy {
+                        showLocationCopiedAlert = true
+                    }
+                }
             } label: {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {

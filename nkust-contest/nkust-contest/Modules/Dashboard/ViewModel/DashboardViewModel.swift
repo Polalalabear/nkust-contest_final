@@ -21,6 +21,7 @@ final class DashboardViewModel {
     var todayStanding: Int { weekRecords.first?.standingMinutes ?? 0 }
 
     private let service: DashboardServicing
+    private var syncTask: Task<Void, Never>?
 
     init(service: DashboardServicing? = nil) {
         self.service = service ?? StubDashboardService()
@@ -32,6 +33,21 @@ final class DashboardViewModel {
 
     func fetchVisUserLocation() {
         isShowingLocation = true
+    }
+
+    func copyVisUserLocation(appState: AppState) async -> Bool {
+        let coordinate = CLLocationCoordinate2D(
+            latitude: appState.visUserLatitude,
+            longitude: appState.visUserLongitude
+        )
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let address = await resolveAddress(from: location)
+        let latlon = String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
+        let payload = "\(address)\n\(latlon)"
+        UIPasteboard.general.string = payload
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        print("[Dashboard] copied location payload: \(payload)")
+        return true
     }
 
     func showNearestHospital(appState: AppState) {
@@ -52,7 +68,9 @@ final class DashboardViewModel {
         Task {
             do {
                 let response = try await MKLocalSearch(request: request).start()
-                let nearest = response.mapItems.min(by: {
+                let hospitals = response.mapItems.filter(isHospitalMapItem(_:))
+                let candidates = hospitals.isEmpty ? response.mapItems : hospitals
+                let nearest = candidates.min(by: {
                     let l0 = $0.location
                     let l1 = $1.location
                     let d0 = l0.distance(from: sourceLocation)
@@ -73,12 +91,16 @@ final class DashboardViewModel {
                 let lat = destination.latitude
                 let lon = destination.longitude
                 let name = (nearest.name ?? "醫院").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "醫院"
-
-                if let appURL = URL(string: "comgooglemaps://?q=\(name)&center=\(lat),\(lon)&zoom=16"),
+                let destinationText = "\(lat),\(lon)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "\(lat),\(lon)"
+                if let appURL = URL(string: "comgooglemaps://?daddr=\(destinationText)&directionsmode=driving&q=\(name)"),
                    UIApplication.shared.canOpenURL(appURL) {
                     await UIApplication.shared.open(appURL)
-                } else if let webURL = URL(string: "https://www.google.com/maps/search/?api=1&query=\(lat),\(lon)") {
+                } else if let webURL = URL(string: "https://www.google.com/maps/dir/?api=1&destination=\(destinationText)&travelmode=driving") {
                     await UIApplication.shared.open(webURL)
+                } else {
+                    nearest.openInMaps(launchOptions: [
+                        MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+                    ])
                 }
             } catch {
                 await SystemIncidentCenter.shared.report(
@@ -92,25 +114,34 @@ final class DashboardViewModel {
 
     /// 依資料來源重新載入；Firebase 暫停期間 live 走本地資料回退。
     func syncDataSource(mode: DataSourceMode, appState: AppState, modelContext: ModelContext) {
-        switch mode {
-        case .mock:
-            FirestoreDashboardSnapshotService.shared.stopListening()
-            appState.liveFirestoreSnapshot = nil
-            weekRecords = DailyHealthRecord.mockWeek()
-            chartDetailRecords = DailyHealthRecord.mockThreeMonths()
-
-        case .live:
-            FirestoreDashboardSnapshotService.shared.stopListening()
-            appState.liveFirestoreSnapshot = nil
-            do {
-                try HealthRecordsPersistence.seedIfEmpty(in: modelContext)
-                reloadFromSwiftData(modelContext: modelContext)
-            } catch {
+        syncTask?.cancel()
+        StartupTrace.log("DashboardLoad", "syncDataSource scheduled mode=\(mode.rawValue)")
+        syncTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            StartupTrace.log("DashboardLoad", "syncDataSource begin mode=\(mode.rawValue)")
+            switch mode {
+            case .mock:
+                FirestoreDashboardSnapshotService.shared.stopListening()
+                appState.liveFirestoreSnapshot = nil
                 weekRecords = DailyHealthRecord.mockWeek()
                 chartDetailRecords = DailyHealthRecord.mockThreeMonths()
+            case .live:
+                FirestoreDashboardSnapshotService.shared.stopListening()
+                appState.liveFirestoreSnapshot = nil
+                do {
+                    try HealthRecordsPersistence.seedIfEmpty(in: modelContext)
+                    reloadFromSwiftData(modelContext: modelContext)
+                } catch {
+                    weekRecords = DailyHealthRecord.mockWeek()
+                    chartDetailRecords = DailyHealthRecord.mockThreeMonths()
+                }
+                // Firebase 暫停：不啟動 Firestore snapshot listener。
+                // startFirestoreListening(appState: appState, modelContext: modelContext)
             }
-            // Firebase 暫停：不啟動 Firestore snapshot listener。
-            // startFirestoreListening(appState: appState, modelContext: modelContext)
+            StartupTrace.log("DashboardLoad", "syncDataSource end mode=\(mode.rawValue)")
         }
     }
 
@@ -153,4 +184,65 @@ final class DashboardViewModel {
             self.reloadFromSwiftData(modelContext: modelContext)
         }
     }
+
+    private func resolveAddress(from location: CLLocation) async -> String {
+        if #available(iOS 26.0, *) {
+            do {
+                guard let request = MKReverseGeocodingRequest(location: location) else {
+                    return "地址未知"
+                }
+                let items = try await request.mapItems
+                if let first = items.first {
+                    if let address = first.address {
+                        let fullAddress = address.fullAddress.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                        if !fullAddress.isEmpty {
+                            return fullAddress
+                        }
+                        if let shortAddressRaw = address.shortAddress {
+                            let shortAddress = shortAddressRaw.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                            if !shortAddress.isEmpty {
+                                return shortAddress
+                            }
+                        }
+                    }
+                    if let name = first.name, !name.isEmpty {
+                        return name
+                    }
+                }
+            } catch {
+                return "地址未知"
+            }
+            return "地址未知"
+        } else {
+            do {
+                let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
+                guard let placemark = placemarks.first else {
+                    return "地址未知"
+                }
+                let parts = [
+                    placemark.country,
+                    placemark.administrativeArea,
+                    placemark.locality,
+                    placemark.subLocality,
+                    placemark.thoroughfare,
+                    placemark.subThoroughfare
+                ]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                let address = parts.joined()
+                return address.isEmpty ? "地址未知" : address
+            } catch {
+                return "地址未知"
+            }
+        }
+    }
+
+    private func isHospitalMapItem(_ item: MKMapItem) -> Bool {
+        if item.pointOfInterestCategory == .hospital {
+            return true
+        }
+        let name = (item.name ?? "").lowercased()
+        return name.contains("醫院") || name.contains("hospital") || name.contains("medical")
+    }
+
 }
