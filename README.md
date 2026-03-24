@@ -111,7 +111,7 @@ nkust-contest/nkust-contest/
 - [x] DecisionEngine / LiveFeedbackManager / WalkMode 串接  
 - [x] CoreHaptics 自訂節奏（LiveFeedbackManager：強停 / 短短 / 短長）  
 - [x] MJPEG 真實串流服務（`MJPEGStreamService`，URLSession + 手動 JPEG 解析）  
-- [x] `live` 模式主線打通（Stream frame → CoreML/Vision → DecisionEngine → Feedback）  
+- [x] `live` 模式主線打通（Stream frame → YOLO + MiDaS + PIDNet 融合推論 → DecisionEngine → Feedback）  
 - [x] MJPEG parser 強化：支援 `multipart/x-mixed-replace` boundary 解析，並保留 JPEG marker fallback  
 - [x] 視障者三模式（Walk / Recognition / LTC）在 `live` + 已連線時皆可顯示最新 ESP32 frame  
 - [x] SwiftData/CoreData 初始化安全：啟動前先確保 `Application Support` 目錄存在，避免 default.store 建檔失敗  
@@ -136,7 +136,7 @@ nkust-contest/nkust-contest/
 - 串流資料解析在背景 queue 進行，`onFrame` 回主執行緒更新 UI（避免主執行緒阻塞）。
 - 相機背景容器已固定為全畫面尺寸並強制裁切（`scaledToFill + clipped`），避免不同 frame 尺寸造成上層 UI 版面位移。
 - 視障者裝置資訊中的「手機電量」改為讀取 iOS 裝置即時電量（`UIDevice.batteryLevel`），不再依賴雲端欄位。
-- Walk 與 Recognition 會把模型判斷即時反映到畫面卡片；Recognition 在判斷文字變化時會觸發語音播報（受語音開關控制）。
+- Walk 與 Recognition 會把融合結果（物件/距離/語意可通行）即時反映到畫面卡片；Recognition 在判斷文字變化時會觸發語音播報（受語音開關控制）。
 
 ## ESP32 MJPEG 切幀技術細節
 
@@ -252,13 +252,14 @@ Console 驗證：啟動時應依序看到：
 3. 若模型有 bbox 中心點，確認 Console 輸出 `[WalkDebugGrid] mapped bbox center ...` 與對應格子高亮。
 4. 關閉開關後，Console 需輸出 `[WalkDebugGrid] overlay disabled` 且格線消失。
 
-### 2) CoreML 模型是否真的被使用
+### 2) CoreML 三模型是否真的被使用
 
-1. 僅在 `live` 模式下，`Walk` / `Recognition` 會嘗試走 `LiveAIService`。
-2. 若模型載入成功，`Recognition` 會持續更新模型判斷文字；`Walk` 會用模型結果更新障礙狀態。
-3. 若模型缺失或推論失敗，系統會立即上報 `SystemIncidentCenter`（通知名：`systemIncidentReported`，並寫入系統 log）。
-4. 目前 repo 的 `Sources/CoreEngine/*.mlpackage` 若只有 `Manifest.json`（缺 `com.apple.CoreML/model.mlmodel` 與 `weights`），即視為模型包不完整，會觸發上報並 fallback。
-5. 若 Vision 回傳非 `VNRecognizedObjectObservation`/`VNClassificationObservation`（例如 `VNCoreMLFeatureValueObservation`），runtime 會嘗試轉成候選信心值；無法映射時視為本幀無偵測，不再直接報「模型輸出格式不支援」。
+1. 僅在 `live` 模式下，`Walk` / `Recognition` 會走 `LiveAIService` 的三模型融合管線。  
+2. 每幀可在 Console 看到融合除錯輸出（可由 `UserDefaults` key `ai.debug.logs.enabled` 控制）：
+   - `[AIFusion][Frame] yoloCount=... top1=... midas=min=... max=... pid=...`
+   - `[AIFusion][Decision] object=... distance=... walkable=... command=...`
+3. 畫面會顯示融合描述（例如：`前方person約 3 公尺，road，可通行`），不再只靠 bbox 面積推導。
+4. 若任一模型失敗，系統不 crash，會 fallback 並上報 `SystemIncidentCenter`（通知名：`systemIncidentReported`）。
 
 ### 3) Gemini API 是否真的串上去
 

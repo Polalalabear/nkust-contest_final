@@ -986,3 +986,32 @@ It is a **machine-readable development log**
 
 **Notes**
 - This change is designed to mitigate UI stutter and "forced sync" pressure from bursty SwiftData writes during interactive toggles
+
+---
+
+### [2026-03-24 23:04]
+
+**Feature**
+- Integrate full live-mode multi-model inference pipeline with YOLO (detection), MiDaS (depth), PIDNet (segmentation), and fusion-based navigation output
+- Replace bbox-area-only distance dependency with MiDaS ROI depth as primary distance source (bbox fallback retained)
+- Update Walk/Recognition live UI text and voice trigger path to reflect fusion output (object + distance + semantic walkability)
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+- /README.md
+
+**State Changes**
+- Added structured model outputs: `DetectedObject`, `DepthResult`, `SegmentationResult`, `FusionDecision`
+- Added live runners: `YOLORunner`, `MiDaSRunner`, `PIDNetRunner` with model spec logging from `modelDescription` (no hardcoded feature names)
+- Added per-frame fusion debug logs and decision logs (`[AIFusion][Frame]`, `[AIFusion][Decision]`) with runtime toggle key `ai.debug.logs.enabled`
+- Recognition mode now uses local fusion summary in live stream loop, avoiding per-frame cloud stub incident noise
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- PIDNet semantic labels currently use Cityscapes 19-class mapping
+- If any model fails in a frame, system reports incident and degrades gracefully without crash

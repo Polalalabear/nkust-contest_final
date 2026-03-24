@@ -103,11 +103,8 @@ final class RecognitionModeViewModel {
             guard let self else { return }
             let ai = self.currentMode == .live ? self.liveAIService : self.mockAIService
             let local = await ai.analyzeLocal(frame: frame)
-            let cloud = await ai.analyzeCloud(frame: frame)
             await MainActor.run {
-                let newDescription = cloud.summary.isEmpty
-                    ? (local.hasObstacle ? "模型偵測：前方可能有障礙物" : "模型偵測：前方相對安全")
-                    : cloud.summary
+                let newDescription = local.fusion.summary
                 self.resultDescription = newDescription
                 self.isSuccess = true
                 self.announceIfNeeded(text: newDescription)
