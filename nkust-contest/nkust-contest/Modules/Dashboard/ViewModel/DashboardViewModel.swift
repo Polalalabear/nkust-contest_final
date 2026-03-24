@@ -166,9 +166,6 @@ final class DashboardViewModel {
             appState.liveFirestoreSnapshot = snap
             if let snap {
                 appState.deviceBattery = snap.deviceBattery
-                if let pb = snap.phoneBattery {
-                    appState.phoneBattery = pb
-                }
                 if let loc = snap.isLocationSharing {
                     appState.isLocationSharing = loc
                 }

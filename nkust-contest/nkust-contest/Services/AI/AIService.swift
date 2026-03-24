@@ -81,7 +81,6 @@ enum CoreMLModelRuntimeError: LocalizedError {
     case missingBundledModelPackage(name: String)
     case frameConversionFailed
     case visionRequestFailed(details: String)
-    case unsupportedVisionOutput
 
     var errorDescription: String? {
         switch self {
@@ -95,8 +94,6 @@ enum CoreMLModelRuntimeError: LocalizedError {
             return "影像格式轉換失敗：無法取得可供 Vision 推論的 CGImage。"
         case .visionRequestFailed(let details):
             return "Vision 推論失敗：\(details)"
-        case .unsupportedVisionOutput:
-            return "模型輸出格式不支援：無法解析為辨識物件結果。"
         }
     }
 }
@@ -207,7 +204,14 @@ final class CoreMLModelRuntime {
                     return
                 }
 
-                continuation.resume(throwing: CoreMLModelRuntimeError.unsupportedVisionOutput)
+                if let featureValues = request.results as? [VNCoreMLFeatureValueObservation] {
+                    let mapped = self.mapFeatureValueObservations(featureValues)
+                    continuation.resume(returning: mapped)
+                    return
+                }
+
+                // 部分模型會回傳非 bbox/classification 結果，視為本幀「無可用偵測」而非錯誤。
+                continuation.resume(returning: [])
             }
 
             request.imageCropAndScaleOption = .scaleFill
@@ -235,6 +239,69 @@ final class CoreMLModelRuntime {
             throw CoreMLModelRuntimeError.frameConversionFailed
         }
         return cgImage
+    }
+
+    private func mapFeatureValueObservations(_ observations: [VNCoreMLFeatureValueObservation]) -> [DetectionCandidate] {
+        var candidates: [DetectionCandidate] = []
+
+        for observation in observations {
+            let featureValue = observation.featureValue
+
+            if let multiArray = featureValue.multiArrayValue {
+                let values = extractNumericValues(from: multiArray)
+                if let maxValue = values.max(), maxValue > 0 {
+                    candidates.append(
+                        DetectionCandidate(
+                            confidence: maxValue,
+                            area: 0.08,
+                            center: nil
+                        )
+                    )
+                }
+                continue
+            }
+
+            if featureValue.type == .double {
+                let confidence = featureValue.doubleValue
+                if confidence > 0 {
+                    candidates.append(DetectionCandidate(confidence: confidence, area: 0.08, center: nil))
+                }
+                continue
+            }
+
+            if featureValue.type == .int64 {
+                let confidence = Double(featureValue.int64Value)
+                if confidence > 0 {
+                    candidates.append(DetectionCandidate(confidence: confidence, area: 0.08, center: nil))
+                }
+            }
+        }
+
+        return candidates
+    }
+
+    private func extractNumericValues(from multiArray: MLMultiArray) -> [Double] {
+        let pointer = multiArray.dataPointer
+        let count = multiArray.count
+        switch multiArray.dataType {
+        case .double:
+            let typed = pointer.bindMemory(to: Double.self, capacity: count)
+            return Array(UnsafeBufferPointer(start: typed, count: count))
+        case .float32:
+            let typed = pointer.bindMemory(to: Float.self, capacity: count)
+            return Array(UnsafeBufferPointer(start: typed, count: count)).map(Double.init)
+        case .float16:
+            let typed = pointer.bindMemory(to: UInt16.self, capacity: count)
+            return Array(UnsafeBufferPointer(start: typed, count: count)).map { Double(Float16(bitPattern: $0)) }
+        case .int32:
+            let typed = pointer.bindMemory(to: Int32.self, capacity: count)
+            return Array(UnsafeBufferPointer(start: typed, count: count)).map(Double.init)
+        case .int8:
+            let typed = pointer.bindMemory(to: Int8.self, capacity: count)
+            return Array(UnsafeBufferPointer(start: typed, count: count)).map(Double.init)
+        @unknown default:
+            return []
+        }
     }
 
     /// 用 bbox 面積粗估距離（僅作導航決策先期接線，後續可替換成模型真實距離輸出）

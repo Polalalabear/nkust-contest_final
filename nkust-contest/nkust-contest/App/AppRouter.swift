@@ -57,6 +57,7 @@ struct AppRouter: View {
         }
         .onAppear {
             StartupTrace.log("AppStartup", "AppRouter onAppear")
+            PhoneBatteryService.shared.start(appState: appState)
             ensureCoordinator()
             syncLiveMonitoring()
         }

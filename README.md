@@ -134,6 +134,8 @@ nkust-contest/nkust-contest/
   4) 經 `LiveFeedbackManager` 輸出語音／震動  
 - Walk / Recognition / LTC 背景可顯示最新 frame（無畫面時回退 placeholder）。
 - 串流資料解析在背景 queue 進行，`onFrame` 回主執行緒更新 UI（避免主執行緒阻塞）。
+- 相機背景容器已固定為全畫面尺寸並強制裁切（`scaledToFill + clipped`），避免不同 frame 尺寸造成上層 UI 版面位移。
+- 視障者裝置資訊中的「手機電量」改為讀取 iOS 裝置即時電量（`UIDevice.batteryLevel`），不再依賴雲端欄位。
 
 ## ESP32 MJPEG 切幀技術細節
 
@@ -255,6 +257,7 @@ Console 驗證：啟動時應依序看到：
 2. 若模型載入成功，`Recognition` 會持續更新模型判斷文字；`Walk` 會用模型結果更新障礙狀態。
 3. 若模型缺失或推論失敗，系統會立即上報 `SystemIncidentCenter`（通知名：`systemIncidentReported`，並寫入系統 log）。
 4. 目前 repo 的 `Sources/CoreEngine/*.mlpackage` 若只有 `Manifest.json`（缺 `com.apple.CoreML/model.mlmodel` 與 `weights`），即視為模型包不完整，會觸發上報並 fallback。
+5. 若 Vision 回傳非 `VNRecognizedObjectObservation`/`VNClassificationObservation`（例如 `VNCoreMLFeatureValueObservation`），runtime 會嘗試轉成候選信心值；無法映射時視為本幀無偵測，不再直接報「模型輸出格式不支援」。
 
 ### 3) Gemini API 是否真的串上去
 

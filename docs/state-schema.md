@@ -10,6 +10,37 @@ It MUST be updated automatically by the agent AFTER:
 
 ---
 
+### [2026-03-24 22:25]
+
+**Feature**
+- Fix CoreML live inference output compatibility by supporting `VNCoreMLFeatureValueObservation` mapping with graceful empty-result fallback
+- Stabilize real-mode camera background layout by enforcing fixed full-screen frame rendering with clipping
+- Sync `AppState.phoneBattery` from actual iOS device battery instead of cloud snapshot override
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+- /nkust-contest/nkust-contest/Shared/Components/CameraPreviewPlaceholder.swift
+- /nkust-contest/nkust-contest/Services/System/PhoneBatteryService.swift (new)
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/ViewModel/DashboardViewModel.swift
+- /README.md
+
+**State Changes**
+- CoreML runtime now handles feature-value style Vision outputs and treats unmapped outputs as no detection for the current frame
+- Camera preview rendering is constrained to container geometry and clipped to prevent stream frame aspect changes from shifting overlay UI
+- Added runtime phone battery monitor service (`UIDevice.batteryLevel`) that updates `AppState.phoneBattery` on level/state changes
+- Firestore live snapshot no longer writes `phoneBattery` into app state
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Device battery (`deviceBattery`) behavior remains unchanged and still follows existing snapshot path
+- `UIDevice.batteryLevel` can be `-1` before monitoring is ready; service keeps previous value until a valid reading is available
+
+---
+
 ## Update Rules (STRICT)
 
 Every update MUST:
