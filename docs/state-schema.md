@@ -845,3 +845,31 @@ It is a **machine-readable development log**
 - SwiftData `.modelContainer`: confirmed not on root view; only in `CaregiverRootContainer` (caregiver role gate)
 - `LiveFeedbackManager.init()` calls `CHHapticEngine() + start()` synchronously but is only constructed on Walk mode entry — not on launch path
 - `VoiceAnnouncementCenter.shared` is `static let` (lazy); first access is `DeviceInfoView.onAppear` — not on launch path
+
+---
+
+### [2026-03-24 19:30]
+
+**Feature**
+- Fix ESP32 live-mode connection detection: add ATS local networking exception, harden URLSession for WiFi-only routing, extend initial connect grace period, and add auto-retry with backoff in StreamHealthCoordinator
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Info.plist (new)
+- /nkust-contest/nkust-contest.xcodeproj/project.pbxproj (INFOPLIST_FILE added)
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+- /README.md
+
+**State Changes**
+- Added `Info.plist` with `NSAllowsLocalNetworking = YES` and `NSLocalNetworkUsageDescription` — removes ATS block on `http://192.168.4.1/stream`
+- `MJPEGStreamService`: URLSession now sets `allowsCellularAccess = false`, `waitsForConnectivity = false` to force WiFi routing
+- `MJPEGStreamService`: added `initialConnectGrace` (8s) — first connection attempt gets longer timeout before marking `stale`; subsequent frame gaps still use 2.5s `staleTimeout`
+- `StreamHealthCoordinator`: added auto-retry with linear backoff (2s, 4s, 6s, 8s; max 5 attempts); resets on successful `connected`; cancels on `stopMonitoring()`
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Root cause: no ATS exception → iOS silently blocked plain HTTP to `192.168.4.1`; compounded by no retry logic and aggressive 2.5s stale timeout for initial connection
+- `NSAllowsLocalNetworking` covers local IP ranges (192.168.x.x); no need for `NSAllowsArbitraryLoads`
+- iOS may show a one-time "allow local network access" prompt on first connection attempt

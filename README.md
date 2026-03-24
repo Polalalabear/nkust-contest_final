@@ -116,6 +116,8 @@ nkust-contest/nkust-contest/
 - [x] 視障者三模式（Walk / Recognition / LTC）在 `live` + 已連線時皆可顯示最新 ESP32 frame  
 - [x] SwiftData/CoreData 初始化安全：啟動前先確保 `Application Support` 目錄存在，避免 default.store 建檔失敗  
 - [x] 啟動效能：`StreamHealthCoordinator` 延遲初始化（Optional + `ensureCoordinator()`），避免 View init 路徑分配 MJPEGStreamService  
+- [x] ATS 例外：`NSAllowsLocalNetworking` + `NSLocalNetworkUsageDescription` 允許 ESP32 HTTP 本地連線  
+- [x] 連線韌性：初始連線寬限 8s、URLSession 強制 WiFi、coordinator 自動重試（最多 5 次指數退避）  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 
@@ -148,9 +150,20 @@ nkust-contest/nkust-contest/
   - `[MJPEGStream] connected status=...`
   - `[MJPEGStream] boundary parser enabled=true/false`
   - `[ConnectionState] ...`（健康狀態轉移）
+  - `[ConnectionState] coordinator retry #N in Xs`（自動重連排程）
+  - `[ConnectionState] coordinator retry #N executing`（重連執行）
+  - `[ConnectionState] coordinator max retries (5) reached, giving up`（最終放棄）
   - `[WalkMode] ...` / `[RecognitionMode] ...` / `[LTCMode] ...`（模式層串流同步）
   - `[WalkDebugGrid] ...`（九宮格開關與 bbox 對應 cell）
   - `[MainTab] ...`（模式切換與循環跳轉）
+
+## ESP32 連線韌性（Connection Resilience）
+
+- **ATS 例外**：`Info.plist` 設定 `NSAllowsLocalNetworking = YES`，允許 `http://192.168.4.1/stream` 的明文 HTTP 連線（ESP32 AP 無 HTTPS）。
+- **強制 WiFi 路由**：URLSession 設 `allowsCellularAccess = false` + `waitsForConnectivity = false`，確保走 ESP32 AP 的 WiFi 而非行動網路。
+- **初始連線寬限**：首次連線允許 8 秒（`initialConnectGrace`）才標記為 `stale`；收到首幀後切回 2.5 秒短逾時。
+- **自動重試**：`StreamHealthCoordinator` 偵測到 `disconnected`（URLSession 失敗）後自動重連，間隔 2s → 4s → 6s → 8s（最多 5 次），收到 `connected` 後重置計數。
+- **iOS 本地網路提示**：首次嘗試連線時 iOS 會顯示「允許存取本地網路」彈窗（`NSLocalNetworkUsageDescription`）。
 
 ## Walk 九宮格 Debug Overlay
 

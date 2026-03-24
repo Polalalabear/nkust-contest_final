@@ -70,12 +70,16 @@ final class MJPEGStreamService: NSObject, StreamService {
     private var healthTimer: DispatchSourceTimer?
     private var didReceiveFirstFrame = false
 
+    private let initialConnectGrace: TimeInterval
+
     init(
         url: URL = URL(string: "http://192.168.4.1/stream")!,
-        staleTimeout: TimeInterval = 2.5
+        staleTimeout: TimeInterval = 2.5,
+        initialConnectGrace: TimeInterval = 8.0
     ) {
         self.streamURL = url
         self.staleTimeout = staleTimeout
+        self.initialConnectGrace = initialConnectGrace
     }
 
     func start() {
@@ -87,6 +91,8 @@ final class MJPEGStreamService: NSObject, StreamService {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 15
         configuration.timeoutIntervalForResource = 60 * 5
+        configuration.allowsCellularAccess = false
+        configuration.waitsForConnectivity = false
 
         let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
         self.session = session
@@ -165,9 +171,10 @@ final class MJPEGStreamService: NSObject, StreamService {
             return
         }
 
-        if now.timeIntervalSince(stateSinceAt) > staleTimeout {
-            debugLog("timeout stale while connecting")
-            transition(to: .stale, reason: "connecting timeout > \(String(format: "%.1f", staleTimeout))s")
+        let grace = didReceiveFirstFrame ? staleTimeout : initialConnectGrace
+        if now.timeIntervalSince(stateSinceAt) > grace {
+            debugLog("timeout stale while connecting (grace=\(String(format: "%.1f", grace))s)")
+            transition(to: .stale, reason: "connecting timeout > \(String(format: "%.1f", grace))s")
         }
     }
 
@@ -329,6 +336,10 @@ final class StreamHealthCoordinator {
     private let monitorService: StreamService
     private var isMonitoring = false
     private var currentState: StreamHealthState = .disconnected
+    private var retryTask: Task<Void, Never>?
+    private var retryCount = 0
+    private let maxRetries = 5
+    private let baseRetryDelay: UInt64 = 2_000_000_000 // 2s
 
     init(monitorService: StreamService? = nil) {
         self.monitorService = monitorService ?? MJPEGStreamService()
@@ -342,6 +353,8 @@ final class StreamHealthCoordinator {
     func startMonitoring() {
         guard !isMonitoring else { return }
         isMonitoring = true
+        retryCount = 0
+        cancelRetry()
         StartupTrace.log("ConnectionState", "coordinator start monitoring")
         monitorService.start()
     }
@@ -349,6 +362,7 @@ final class StreamHealthCoordinator {
     func stopMonitoring() {
         guard isMonitoring else { return }
         isMonitoring = false
+        cancelRetry()
         StartupTrace.log("ConnectionState", "coordinator stop monitoring")
         monitorService.stop()
         apply(state: .disconnected)
@@ -360,6 +374,36 @@ final class StreamHealthCoordinator {
         currentState = state
         StartupTrace.log("ConnectionState", "coordinator transition \(old.rawValue) -> \(state.rawValue)")
         onStateChange?(state)
+
+        if state == .connected {
+            retryCount = 0
+            cancelRetry()
+        } else if state == .disconnected && isMonitoring {
+            scheduleRetry()
+        }
+    }
+
+    private func scheduleRetry() {
+        cancelRetry()
+        guard retryCount < maxRetries else {
+            StartupTrace.log("ConnectionState", "coordinator max retries (\(maxRetries)) reached, giving up")
+            return
+        }
+        retryCount += 1
+        let delay = baseRetryDelay * UInt64(min(retryCount, 4))
+        let delaySec = Double(delay) / 1_000_000_000
+        StartupTrace.log("ConnectionState", "coordinator retry #\(retryCount) in \(String(format: "%.1f", delaySec))s")
+        retryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
+            guard let self, self.isMonitoring, self.currentState != .connected else { return }
+            StartupTrace.log("ConnectionState", "coordinator retry #\(self.retryCount) executing")
+            self.monitorService.start()
+        }
+    }
+
+    private func cancelRetry() {
+        retryTask?.cancel()
+        retryTask = nil
     }
 }
 
