@@ -695,3 +695,37 @@ It is a **machine-readable development log**
 
 **Notes**
 - Existing dashboard nearest-hospital Google Maps jump and 5-second disconnected reminders remain active and documented
+
+---
+
+### [2026-03-24 14:42]
+
+**Feature**
+- Enable real-device stream path for `live` mode while keeping `mock` mode behavior unchanged
+- Implement CoreML + Vision local inference pipeline from incoming stream frames (with model loading/cache and failure fallback)
+- Wire per-frame walk flow: frame → AI result → DecisionEngine → feedback output, with action-rate limiting
+- Render latest incoming frame as camera background in Walk/Recognition views for real stream validation
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/Service/WalkModeService.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+- /nkust-contest/nkust-contest/Shared/Components/CameraPreviewPlaceholder.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+
+**State Changes**
+- `StreamDevelopmentPhase.current` now permits real MJPEG implementation (actual start/stop remains controlled by `DataSourceMode` and connection state)
+- `LocalResult` now carries confidence + estimated obstacle distance to support decision input
+- Walk mode now performs decision + feedback on each analyzed frame and updates direction card from latest action
+- Shared camera component now displays actual frame when available, falls back to placeholder when unavailable
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- `analyzeCloud` (Gemini) remains stub (no real API call)
+- Distance is currently estimated from detection bbox area for early real-time routing; can be replaced by true depth/distance model output later

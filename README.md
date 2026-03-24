@@ -111,8 +111,51 @@ nkust-contest/nkust-contest/
 - [x] DecisionEngine / LiveFeedbackManager / WalkMode 串接  
 - [x] CoreHaptics 自訂節奏（LiveFeedbackManager：強停 / 短短 / 短長）  
 - [x] MJPEG 真實串流服務（`MJPEGStreamService`，URLSession + 手動 JPEG 解析；預設仍遵守階段規則使用 Mock）  
+- [x] `live` 模式主線打通（Stream frame → CoreML/Vision → DecisionEngine → Feedback）  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
+
+## 實際模式（Live）最新確認
+
+- `mock` 模式維持原行為（測試資料 + 可切換模擬連線）。
+- `live` 模式目前會嘗試：
+  1) 連 ESP32 MJPEG（`http://192.168.4.1/stream`）  
+  2) 每幀送入 `LiveAIService`（CoreML + Vision）  
+  3) 生成導航上下文後交給 `DefaultDecisionEngine`  
+  4) 經 `LiveFeedbackManager` 輸出語音／震動  
+- Walk / Recognition 背景可顯示最新 frame（無畫面時回退 placeholder）。
+
+## Sources/CoreEngine 檢查（2026-03-24）
+
+已再次確認 `Sources/CoreEngine` 三個模型包目前皆包含完整基本結構：
+
+- `PIDNet_S_Cityscapes_val.mlpackage/Data/com.apple.CoreML/model.mlmodel`
+- `PIDNet_S_Cityscapes_val.mlpackage/Data/com.apple.CoreML/weights/weight.bin`
+- `midas_v21_small_256.mlpackage/Data/com.apple.CoreML/model.mlmodel`
+- `midas_v21_small_256.mlpackage/Data/com.apple.CoreML/weights/weight.bin`
+- `yolo26n.mlpackage/Data/com.apple.CoreML/model.mlmodel`
+- `yolo26n.mlpackage/Data/com.apple.CoreML/weights/weight.bin`
+
+若後續模型包再發生缺失，系統會 fallback 並回報 incident（不 crash）。
+
+## API Key 放置與資安規範（務必遵守）
+
+### 1) Key 要放哪裡
+
+- **Firebase key**：由本機 `GoogleService-Info.plist` 提供（此檔已在 `.gitignore`，不可提交）。
+- **Gemini/其他雲端 key**：請放在本機私有設定檔（建議 `nkust-contest/Secrets.xcconfig`），透過 Build Settings 注入，不可硬編碼在 `.swift`。
+
+### 2) 禁止事項（避免外洩）
+
+- 不可把 key 寫進 `README.md`、程式碼常數、截圖、commit message。
+- 不可把 `GoogleService-Info.plist` 或私有 `Secrets.xcconfig` 提交到 GitHub。
+- 不可在公開 issue / PR 直接貼完整 token。
+
+### 3) 最低資安要求
+
+- key 一律使用最小權限與環境隔離（dev/staging/prod 分離）。
+- 發現疑似外洩時：**立即撤銷（revoke）並輪替（rotate）**，同時檢查存取紀錄。
+- 雲端規則（Firestore / API）必須限制來源與身分，不可只靠 App 端隱藏 key。
 
 ## 測試指引（ESP32 / CoreML / Gemini）
 

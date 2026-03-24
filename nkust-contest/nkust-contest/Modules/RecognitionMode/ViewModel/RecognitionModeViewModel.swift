@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -9,6 +10,7 @@ final class RecognitionModeViewModel {
     var useDeviceCamera: Bool = true
     var isUsingLiveStream: Bool = false
     var lastFrameReceivedAt: Date?
+    var latestFrame: UIImage?
 
     private let service: RecognitionModeServicing
     private let mockAIService: AIService
@@ -77,10 +79,12 @@ final class RecognitionModeViewModel {
             if resultDescription.isEmpty {
                 resultDescription = "等待串流畫面中"
             }
+            latestFrame = nil
             return
         }
 
         lastFrameReceivedAt = Date()
+        latestFrame = frame
 
         guard !isAnalyzingFrame else { return }
         isAnalyzingFrame = true

@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -12,6 +13,7 @@ final class WalkModeViewModel {
     var lastDecision: DecisionResult?
     var isUsingLiveStream: Bool = false
     var lastFrameReceivedAt: Date?
+    var latestFrame: UIImage?
 
     private let service: WalkModeServicing
     private let mockAIService: AIService
@@ -20,6 +22,7 @@ final class WalkModeViewModel {
     private var isStreaming = false
     private var currentMode: DataSourceMode = .mock
     private var isAnalyzingFrame = false
+    private var isVoiceFeedbackEnabled = true
 
     init(
         service: WalkModeServicing,
@@ -59,7 +62,9 @@ final class WalkModeViewModel {
 
     /// 依目前 UI 狀態重新決策並觸發語音／觸覺（進入畫面或語音開關變更時呼叫）
     func refreshNavigation(voiceEnabled: Bool) {
+        isVoiceFeedbackEnabled = voiceEnabled
         lastDecision = service.evaluateNavigation(context: buildContext(), voiceEnabled: voiceEnabled)
+        updateDirectionByDecision(lastDecision)
     }
 
     func syncStreaming(mode: DataSourceMode, isConnected: Bool) {
@@ -108,10 +113,12 @@ final class WalkModeViewModel {
         guard isUsingLiveStream else { return }
         guard let frame else {
             connectionStatus = "等待影像中"
+            latestFrame = nil
             return
         }
 
         lastFrameReceivedAt = Date()
+        latestFrame = frame
         connectionStatus = "串流已連線"
 
         guard !isAnalyzingFrame else { return }
@@ -122,9 +129,36 @@ final class WalkModeViewModel {
             let ai = self.currentMode == .live ? self.liveAIService : self.mockAIService
             let result = await ai.analyzeLocal(frame: frame)
             await MainActor.run {
-                self.obstacle = result.hasObstacle ? .mock : .empty
+                let distance = result.estimatedObstacleDistanceMeters ?? 8
+                self.obstacle = result.hasObstacle
+                    ? ObstacleInfo(description: "前方偵測到障礙物", distance: distance)
+                    : .empty
+                if result.trafficLightRed == true {
+                    self.trafficLight = .redLight
+                } else {
+                    self.trafficLight = .none
+                }
+                self.lastDecision = self.service.evaluateNavigation(
+                    context: self.buildContext(),
+                    voiceEnabled: self.isVoiceFeedbackEnabled
+                )
+                self.updateDirectionByDecision(self.lastDecision)
                 self.isAnalyzingFrame = false
             }
+        }
+    }
+
+    private func updateDirectionByDecision(_ result: DecisionResult?) {
+        guard let result else { return }
+        switch result.action {
+        case .stop:
+            direction = DirectionInfo(instruction: "請停止", detail: "前方風險較高")
+        case .moveLeft:
+            direction = DirectionInfo(instruction: "請向左修正", detail: "避開前方障礙")
+        case .moveRight:
+            direction = DirectionInfo(instruction: "請向右修正", detail: "避開前方障礙")
+        case .safe:
+            direction = DirectionInfo(instruction: "保持直行", detail: "路徑暫時安全")
         }
     }
 

@@ -1,10 +1,19 @@
 import UIKit
 import CoreML
+import Vision
 
 struct LocalResult {
     let hasObstacle: Bool
+    let confidence: Double
+    let estimatedObstacleDistanceMeters: Int?
+    let trafficLightRed: Bool?
 
-    static let mock = LocalResult(hasObstacle: false)
+    static let mock = LocalResult(
+        hasObstacle: false,
+        confidence: 0,
+        estimatedObstacleDistanceMeters: nil,
+        trafficLightRed: nil
+    )
 }
 
 struct CloudResult {
@@ -40,9 +49,8 @@ final class LiveAIService: AIService {
     }
 
     func analyzeLocal(frame: UIImage) async -> LocalResult {
-        _ = frame
         do {
-            return try await modelRuntime.predictLocal()
+            return try await modelRuntime.predictLocal(frame: frame)
         } catch {
             await SystemIncidentCenter.shared.report(
                 title: "CoreML 推論失敗",
@@ -69,6 +77,9 @@ enum CoreMLModelRuntimeError: LocalizedError {
     case missingModel(name: String)
     case unsupportedPackageLayout(name: String)
     case missingModelPackage(path: String)
+    case frameConversionFailed
+    case visionRequestFailed(details: String)
+    case unsupportedVisionOutput
 
     var errorDescription: String? {
         switch self {
@@ -78,6 +89,12 @@ enum CoreMLModelRuntimeError: LocalizedError {
             return "模型包不完整：\(name).mlpackage 缺少 Data/com.apple.CoreML/model.mlmodel 或 weights"
         case .missingModelPackage(let path):
             return "模型包不存在：\(path)"
+        case .frameConversionFailed:
+            return "影像格式轉換失敗：無法取得可供 Vision 推論的 CGImage。"
+        case .visionRequestFailed(let details):
+            return "Vision 推論失敗：\(details)"
+        case .unsupportedVisionOutput:
+            return "模型輸出格式不支援：無法解析為辨識物件結果。"
         }
     }
 }
@@ -85,12 +102,32 @@ enum CoreMLModelRuntimeError: LocalizedError {
 final class CoreMLModelRuntime {
     private let localModelName = "yolo26n"
     private let packageBaseRelativePath = "Sources/CoreEngine"
+    private var cachedModelURL: URL?
+    private var cachedVisionModel: VNCoreMLModel?
 
-    func predictLocal() async throws -> LocalResult {
-        let _ = try resolveModelURL(named: localModelName)
+    func predictLocal(frame: UIImage) async throws -> LocalResult {
+        let modelURL = try resolveModelURL(named: localModelName)
+        let cgImage = try resolveCGImage(from: frame)
+        let visionModel = try resolveVisionModel(modelURL: modelURL)
+        let detections = try await runVisionInference(cgImage: cgImage, model: visionModel)
 
-        // TODO: 串入 Vision + 真實輸入前處理／後處理，這裡先保留最小可驗證路徑。
-        return LocalResult(hasObstacle: Bool.random())
+        guard let nearest = detections.max(by: { $0.area < $1.area }) else {
+            return LocalResult(
+                hasObstacle: false,
+                confidence: 0,
+                estimatedObstacleDistanceMeters: nil,
+                trafficLightRed: nil
+            )
+        }
+
+        let confidence = nearest.confidence
+        let estimatedDistance = estimateDistanceMeters(from: nearest.area)
+        return LocalResult(
+            hasObstacle: confidence >= 0.35,
+            confidence: confidence,
+            estimatedObstacleDistanceMeters: estimatedDistance,
+            trafficLightRed: nil
+        )
     }
 
     private func resolveModelURL(named name: String) throws -> URL {
@@ -124,4 +161,97 @@ final class CoreMLModelRuntime {
         let hasWeights = FileManager.default.fileExists(atPath: "\(packagePath)/Data/com.apple.CoreML/weights")
         return hasSpec && hasWeights
     }
+
+    private func resolveVisionModel(modelURL: URL) throws -> VNCoreMLModel {
+        if let cachedModelURL, let cachedVisionModel, cachedModelURL == modelURL {
+            return cachedVisionModel
+        }
+
+        let loadedModel: MLModel
+        if modelURL.pathExtension == "mlpackage" {
+            let compiledURL = try MLModel.compileModel(at: modelURL)
+            loadedModel = try MLModel(contentsOf: compiledURL)
+        } else {
+            loadedModel = try MLModel(contentsOf: modelURL)
+        }
+
+        let vnModel = try VNCoreMLModel(for: loadedModel)
+        cachedModelURL = modelURL
+        cachedVisionModel = vnModel
+        return vnModel
+    }
+
+    private func runVisionInference(
+        cgImage: CGImage,
+        model: VNCoreMLModel
+    ) async throws -> [DetectionCandidate] {
+        try await withCheckedThrowingContinuation { continuation in
+            let request = VNCoreMLRequest(model: model) { request, error in
+                if let error {
+                    continuation.resume(throwing: CoreMLModelRuntimeError.visionRequestFailed(details: error.localizedDescription))
+                    return
+                }
+
+                if let objects = request.results as? [VNRecognizedObjectObservation] {
+                    let mapped = objects.map {
+                        DetectionCandidate(confidence: Double($0.confidence), area: $0.boundingBox.area)
+                    }
+                    continuation.resume(returning: mapped)
+                    return
+                }
+
+                if let classifications = request.results as? [VNClassificationObservation] {
+                    let mapped = classifications.map { item in
+                        DetectionCandidate(confidence: Double(item.confidence), area: 0.08)
+                    }
+                    continuation.resume(returning: mapped)
+                    return
+                }
+
+                continuation.resume(throwing: CoreMLModelRuntimeError.unsupportedVisionOutput)
+            }
+
+            request.imageCropAndScaleOption = .scaleFill
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+
+            do {
+                try handler.perform([request])
+            } catch {
+                continuation.resume(throwing: CoreMLModelRuntimeError.visionRequestFailed(details: error.localizedDescription))
+            }
+        }
+    }
+
+    private func resolveCGImage(from image: UIImage) throws -> CGImage {
+        if let cgImage = image.cgImage {
+            return cgImage
+        }
+
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        let rendered = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+        }
+
+        guard let cgImage = rendered.cgImage else {
+            throw CoreMLModelRuntimeError.frameConversionFailed
+        }
+        return cgImage
+    }
+
+    /// 用 bbox 面積粗估距離（僅作導航決策先期接線，後續可替換成模型真實距離輸出）
+    private func estimateDistanceMeters(from area: CGFloat) -> Int {
+        if area >= 0.35 { return 1 }
+        if area >= 0.20 { return 3 }
+        if area >= 0.10 { return 6 }
+        return 10
+    }
+}
+
+private extension CGRect {
+    var area: CGFloat { width * height }
+}
+
+private struct DetectionCandidate {
+    let confidence: Double
+    let area: CGFloat
 }

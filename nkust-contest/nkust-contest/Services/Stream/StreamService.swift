@@ -7,12 +7,13 @@ protocol StreamService: AnyObject {
     func stop()
 }
 
-/// 階段規則：目前預設只能使用 Mock；下一階段才允許真機 MJPEG。
+/// 階段規則：仍保留 mock/live gate；live 階段允許真機 MJPEG。
 enum StreamDevelopmentPhase {
     case mockOnly
     case realDeviceAllowed
 
-    static let current: StreamDevelopmentPhase = .mockOnly
+    /// 目前已進入「測試實機串流」階段：mock/live 由上層流程控制啟停。
+    static let current: StreamDevelopmentPhase = .realDeviceAllowed
 }
 
 enum StreamServiceFactory {

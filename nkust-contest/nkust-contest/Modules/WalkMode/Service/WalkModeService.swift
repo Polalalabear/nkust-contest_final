@@ -16,6 +16,8 @@ final class DefaultWalkModeService: WalkModeServicing {
     private let decisionEngine: DecisionEngine
     private let feedback: FeedbackManager
     private var userMuted = false
+    private var lastDeliveredAction: NavigationAction?
+    private var lastFeedbackAt: Date?
 
     init(engine: DecisionEngine, feedback: FeedbackManager) {
         self.decisionEngine = engine
@@ -29,7 +31,11 @@ final class DefaultWalkModeService: WalkModeServicing {
     func evaluateNavigation(context: DecisionContext, voiceEnabled: Bool) -> DecisionResult {
         let result = decisionEngine.decide(context: context)
         let effectiveVoice = voiceEnabled && !userMuted
-        feedback.deliverNavigationFeedback(result, context: context, voiceEnabled: effectiveVoice)
+        if shouldDeliverFeedback(for: result.action) {
+            feedback.deliverNavigationFeedback(result, context: context, voiceEnabled: effectiveVoice)
+            lastDeliveredAction = result.action
+            lastFeedbackAt = Date()
+        }
         return result
     }
 
@@ -48,6 +54,14 @@ final class DefaultWalkModeService: WalkModeServicing {
 
     func triggerSOS() {
         feedback.triggerSOS()
+    }
+
+    private func shouldDeliverFeedback(for action: NavigationAction) -> Bool {
+        let now = Date()
+        let actionChanged = lastDeliveredAction != action
+        let minimumInterval: TimeInterval = action == .safe ? 2.5 : 1.0
+        let intervalReached = lastFeedbackAt.map { now.timeIntervalSince($0) >= minimumInterval } ?? true
+        return actionChanged || intervalReached
     }
 }
 

@@ -9,7 +9,7 @@ struct RecognitionModeView: View {
 
     var body: some View {
         ZStack {
-            CameraPreviewPlaceholder()
+            CameraPreviewPlaceholder(frame: viewModel.latestFrame)
 
             VStack(spacing: 12) {
                 ModeHeaderBar(
