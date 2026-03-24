@@ -189,13 +189,15 @@ private struct CaregiverDashboardHost: View {
             .task {
                 if !didLoadPersistedSettings {
                     didLoadPersistedSettings = true
-                    loadPersistedSettings()
+                    await loadPersistedSettings()
                 }
             }
     }
 
-    private func loadPersistedSettings() {
+    private func loadPersistedSettings() async {
         StartupTrace.log("AppStartup", "caregiver persistence load begin")
+        // Keep first interaction smooth before touching SwiftData.
+        try? await Task.sleep(nanoseconds: 250_000_000)
         do {
             let settings = try AppSettingsPersistence.loadOrCreateSettings(in: modelContext)
             AppSettingsPersistence.apply(settings: settings, to: appState)

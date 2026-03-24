@@ -902,3 +902,30 @@ It is a **machine-readable development log**
 - Root cause of loop: `canStartLiveMonitoring` requires `!showMainFlow`; coordinator detected `connected` → user enters main flow → coordinator stops → health resets to `disconnected` → user kicked out → coordinator restarts → loop
 - Fix preserves health state when the stop reason is "user is entering main flow" (not "user changed mode/role")
 - `ignoreHealthUpdates` flag blocks the async `onHealthChange` callback that arrives after `monitorService.stop()` returns
+
+---
+
+### [2026-03-24 21:05]
+
+**Feature**
+- Reduce main-thread persistence pressure by introducing debounced SwiftData saves for caregiver dashboard preference changes
+- Delay caregiver settings hydration slightly after dashboard presentation to keep first interaction responsive
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Shared/Persistence/AppSettingsPersistence.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /nkust-contest/nkust-contest/App/AppRouter.swift
+- /README.md
+
+**State Changes**
+- `AppSettingsPersistence` adds `scheduleSave(...)` and `cancelScheduledSave()` to coalesce rapid preference changes into one delayed save
+- Dashboard `onChange` handlers now call debounced persistence instead of immediate `context.save()` per change
+- Profile/Preferences close paths cancel pending debounce before explicit save to avoid duplicate writes
+- `CaregiverDashboardHost` persistence load changed to async task with short delay (`250ms`) before `loadOrCreateSettings`
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- This change is designed to mitigate UI stutter and "forced sync" pressure from bursty SwiftData writes during interactive toggles

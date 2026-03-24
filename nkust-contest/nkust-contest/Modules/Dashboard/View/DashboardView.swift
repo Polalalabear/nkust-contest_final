@@ -143,19 +143,19 @@ struct SummaryView: View {
             }
             .onChange(of: appState.dataSourceMode) { _, newMode in
                 viewModel.syncDataSource(mode: newMode, appState: appState, modelContext: modelContext)
-                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
             }
             .onChange(of: appState.mockDeviceConnected) { _, _ in
-                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
             }
             .onChange(of: appState.showCharts) { _, _ in
-                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
             }
             .onChange(of: appState.isDarkMode) { _, _ in
-                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
             }
             .onChange(of: appState.preferredChartStyle) { _, _ in
-                try? AppSettingsPersistence.save(from: appState, context: modelContext)
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
             }
         }
     }
@@ -524,12 +524,14 @@ struct ProfileSheetView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("關閉") {
+                        AppSettingsPersistence.cancelScheduledSave()
                         try? AppSettingsPersistence.save(from: appState, context: modelContext)
                         dismiss()
                     }
                 }
             }
             .onDisappear {
+                AppSettingsPersistence.cancelScheduledSave()
                 try? AppSettingsPersistence.save(from: appState, context: modelContext)
             }
         }
@@ -614,6 +616,7 @@ struct PreferencesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(appState.isDarkMode ? .dark : .light)
         .onDisappear {
+            AppSettingsPersistence.cancelScheduledSave()
             try? AppSettingsPersistence.save(from: appState, context: modelContext)
         }
     }

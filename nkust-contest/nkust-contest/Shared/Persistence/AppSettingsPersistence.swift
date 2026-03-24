@@ -3,6 +3,7 @@ import SwiftData
 
 enum AppSettingsPersistence {
     private static let singletonKey = "app_settings_singleton"
+    @MainActor private static var pendingSaveTask: Task<Void, Never>?
 
     @MainActor
     static func loadOrCreateSettings(in context: ModelContext) throws -> PersistedAppSettings {
@@ -43,5 +44,26 @@ enum AppSettingsPersistence {
         settings.caregiverRelationship = appState.caregiverRelationship
         settings.caregiverEmergencyPhone = appState.caregiverEmergencyPhone
         try context.save()
+    }
+
+    /// Debounced save to reduce SwiftData sync pressure on main thread.
+    @MainActor
+    static func scheduleSave(
+        from appState: AppState,
+        context: ModelContext,
+        debounceNs: UInt64 = 350_000_000
+    ) {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: debounceNs)
+            guard !Task.isCancelled else { return }
+            try? save(from: appState, context: context)
+        }
+    }
+
+    @MainActor
+    static func cancelScheduledSave() {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = nil
     }
 }

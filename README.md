@@ -120,6 +120,7 @@ nkust-contest/nkust-contest/
 - [x] 連線韌性：初始連線寬限 8s、URLSession 強制 WiFi、coordinator 自動重試（最多 5 次退避）  
 - [x] 修正連線偵測迴圈：進入主流程時保留健康狀態，不再因 coordinator 停止而重設為 disconnected  
 - [x] 手動重新連線：DeviceInfoView 未連線時顯示「重新連線」按鈕 + 即時連線狀態文字（連線中/已連接/訊號不穩/未連接）  
+- [x] SwiftData 寫入防抖：Dashboard 設定變更改為 debounce 儲存，降低主執行緒連續 `context.save()` 壓力  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 
@@ -197,6 +198,7 @@ Console 驗證：啟動時應依序看到：
 - 目標是避免 `default.store` 建立前發生：
   - `Failed to stat path`
   - `Failed to create file; code = 2`
+- Dashboard 互動期的設定持久化改為 `AppSettingsPersistence.scheduleSave(...)` 防抖策略（預設 350ms），避免多個 toggle/segmented 操作連續同步寫入造成 UI 卡頓風險。
 
 ## Sources/CoreEngine 檢查（2026-03-24）
 
