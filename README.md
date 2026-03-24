@@ -103,11 +103,11 @@ nkust-contest/nkust-contest/
 
 ## 開發狀態
 
-> 最後更新：2026-03-20 · App 版本見 `AppState.appVersion`（目前 **v1.4.0**）
+> 最後更新：2026-03-24 · App 版本見 `AppState.appVersion`（目前 **v1.4.0**）
 
 - [x] Firebase 初始化（`AppDelegate` + `GoogleService-Info.plist`）  
 - [x] SwiftData 容器 + 設定／健康日模型  
-- [x] 照護者：裝置狀態列、測試/真實資料切換、Firestore 監聽  
+- [x] 照護者：裝置狀態列、測試/真實資料切換、Firestore 監聯  
 - [x] DecisionEngine / LiveFeedbackManager / WalkMode 串接  
 - [x] CoreHaptics 自訂節奏（LiveFeedbackManager：強停 / 短短 / 短長）  
 - [x] MJPEG 真實串流服務（`MJPEGStreamService`，URLSession + 手動 JPEG 解析）  
@@ -115,7 +115,7 @@ nkust-contest/nkust-contest/
 - [x] MJPEG parser 強化：支援 `multipart/x-mixed-replace` boundary 解析，並保留 JPEG marker fallback  
 - [x] 視障者三模式（Walk / Recognition / LTC）在 `live` + 已連線時皆可顯示最新 ESP32 frame  
 - [x] SwiftData/CoreData 初始化安全：啟動前先確保 `Application Support` 目錄存在，避免 default.store 建檔失敗  
-- [x] 啟動體驗優化：啟動時先放行主 UI，再背景回填 SwiftData 設定，避免實機首屏 loading 長時間滯留  
+- [x] 啟動效能：`StreamHealthCoordinator` 延遲初始化（Optional + `ensureCoordinator()`），避免 View init 路徑分配 MJPEGStreamService  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 
@@ -158,6 +158,23 @@ nkust-contest/nkust-contest/
 - 開關：`AppState.showWalkDebugGrid`（目前預設 `false`），Walk 畫面內可直接切換「顯示九宮格偵錯」。
 - bbox 對應：若模型回傳 bounding box 中心點，會高亮命中格並輸出 `[WalkDebugGrid] mapped bbox center ... row=... col=...`。
 - 無障礙：九宮格 overlay 設為 `accessibilityHidden(true)` 且不接收觸控事件，不會被 VoiceOver 當成互動元件。
+
+## 啟動效能優化（Launch Performance）
+
+已排查並解決 AppRouter 首幀渲染瓶頸。分析結論：
+
+| 組件 | 是否阻塞首幀？ | 處理方式 |
+|------|---------------|---------|
+| `StreamHealthCoordinator` | **是** — `@State` 在 view init 時同步建立 `MJPEGStreamService`（NSObject + DispatchQueue + Data buffer） | 改為 `Optional`，延遲到 `.onAppear` 的 `ensureCoordinator()` 建立 |
+| `AppState` | 否 — 純值型別預設值指定，無 I/O | 不變 |
+| SwiftData `.modelContainer` | 否 — 僅在 `CaregiverRootContainer` 使用，不影響初始路徑 | 不變 |
+| `LiveFeedbackManager` (CHHapticEngine) | 否（首幀） — 僅在進入 Walk 模式時才建立 | 不變（日後可考慮 lazy init） |
+| `VoiceAnnouncementCenter` (AVSpeechSynthesizer) | 否 — `static let shared` lazy 初始化，首次存取在 DeviceInfoView | 不變 |
+
+Console 驗證：啟動時應依序看到：
+- `[AppStartup] AppRouter onAppear`
+- `[AppStartup] StreamHealthCoordinator deferred init begin`
+- `[AppStartup] StreamHealthCoordinator deferred init end`
 
 ## 持久化初始化安全（CoreData/SwiftData）
 

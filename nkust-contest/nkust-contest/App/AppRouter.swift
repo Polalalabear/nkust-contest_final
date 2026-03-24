@@ -5,7 +5,7 @@ import SwiftUI
 struct AppRouter: View {
     @Environment(AppState.self) private var appState
     @State private var showMainFlow = false
-    @State private var streamHealthCoordinator = StreamHealthCoordinator()
+    @State private var streamHealthCoordinator: StreamHealthCoordinator?
     @State private var isBootstrapping = true
     @State private var didBootstrap = false
     @State private var didApplyBootstrappedSettings = false
@@ -54,9 +54,7 @@ struct AppRouter: View {
         }
         .onAppear {
             StartupTrace.log("AppStartup", "AppRouter onAppear")
-            streamHealthCoordinator.onStateChange = { state in
-                appState.liveStreamHealthState = state
-            }
+            ensureCoordinator()
             syncLiveMonitoring()
         }
         .onChange(of: appState.userRole) { _, _ in
@@ -80,10 +78,23 @@ struct AppRouter: View {
         }
     }
 
+    /// Deferred creation of StreamHealthCoordinator — avoids MJPEGStreamService
+    /// allocation (DispatchQueue + NSObject + Data buffer) during view init,
+    /// keeping the first-frame render path allocation-free.
+    private func ensureCoordinator() {
+        guard streamHealthCoordinator == nil else { return }
+        StartupTrace.log("AppStartup", "StreamHealthCoordinator deferred init begin")
+        let coordinator = StreamHealthCoordinator()
+        coordinator.onStateChange = { [weak appState] state in
+            appState?.liveStreamHealthState = state
+        }
+        streamHealthCoordinator = coordinator
+        StartupTrace.log("AppStartup", "StreamHealthCoordinator deferred init end")
+    }
+
     private func startBootstrapFlow() {
         StartupTrace.log("AppStartup", "start bootstrap")
         Task { @MainActor in
-            // 啟動畫面最多只阻擋短時間，避免黑屏體感。
             try? await Task.sleep(nanoseconds: 350_000_000)
             if isBootstrapping {
                 didApplyBootstrappedSettings = true
@@ -105,12 +116,12 @@ struct AppRouter: View {
             pendingMonitorTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 250_000_000)
                 guard canStartLiveMonitoring else { return }
-                streamHealthCoordinator.startMonitoring()
+                streamHealthCoordinator?.startMonitoring()
             }
         } else {
             pendingMonitorTask?.cancel()
             pendingMonitorTask = nil
-            streamHealthCoordinator.stopMonitoring()
+            streamHealthCoordinator?.stopMonitoring()
             if appState.dataSourceMode != .live || appState.userRole != .visuallyImpaired {
                 appState.liveStreamHealthState = .disconnected
             }

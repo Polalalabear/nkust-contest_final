@@ -821,23 +821,27 @@ It is a **machine-readable development log**
 
 ---
 
-### [2026-03-24 18:44]
+### [2026-03-24 19:00]
 
 **Feature**
-- Fix startup loading stall on real device by changing bootstrap order to dismiss launch overlay first, then restore persisted settings
-- Update README development status to document the non-blocking startup flow
+- Diagnose and fix AppRouter first-frame render bottleneck by deferring `StreamHealthCoordinator` initialization from `@State` view init to `.onAppear`
 
 **Modules Affected**
 - /nkust-contest/nkust-contest/App/AppRouter.swift
 - /README.md
 
 **State Changes**
-- App launch bootstrap sequence is now: start bootstrap -> dismiss loading overlay ASAP -> run SwiftData settings restore in background task
-- This prevents slow SwiftData first-read on device from blocking launch loading dismissal
+- `streamHealthCoordinator` changed from `StreamHealthCoordinator` (eager) to `StreamHealthCoordinator?` (Optional, deferred)
+- New `ensureCoordinator()` method creates coordinator + wires `onStateChange` callback on first `.onAppear`
+- All coordinator call sites now use optional chaining (`streamHealthCoordinator?.startMonitoring()` / `?.stopMonitoring()`)
+- README: added 啟動效能優化 section with component-level bottleneck analysis table
 
 **Test Coverage**
-- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
 - Result: PASS
 
 **Notes**
-- Build in this environment requires elevated permissions due external cache/log access outside workspace
+- `AppState.init()`: confirmed clean (no I/O, no UserDefaults, no network)
+- SwiftData `.modelContainer`: confirmed not on root view; only in `CaregiverRootContainer` (caregiver role gate)
+- `LiveFeedbackManager.init()` calls `CHHapticEngine() + start()` synchronously but is only constructed on Walk mode entry — not on launch path
+- `VoiceAnnouncementCenter.shared` is `static let` (lazy); first access is `DeviceInfoView.onAppear` — not on launch path
