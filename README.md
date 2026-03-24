@@ -136,6 +136,7 @@ nkust-contest/nkust-contest/
 - 串流資料解析在背景 queue 進行，`onFrame` 回主執行緒更新 UI（避免主執行緒阻塞）。
 - 相機背景容器已固定為全畫面尺寸並強制裁切（`scaledToFill + clipped`），避免不同 frame 尺寸造成上層 UI 版面位移。
 - 視障者裝置資訊中的「手機電量」改為讀取 iOS 裝置即時電量（`UIDevice.batteryLevel`），不再依賴雲端欄位。
+- Walk 與 Recognition 會把模型判斷即時反映到畫面卡片；Recognition 在判斷文字變化時會觸發語音播報（受語音開關控制）。
 
 ## ESP32 MJPEG 切幀技術細節
 

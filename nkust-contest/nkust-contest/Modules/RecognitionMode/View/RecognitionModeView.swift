@@ -40,6 +40,7 @@ struct RecognitionModeView: View {
             }
         }
         .onAppear {
+            viewModel.setVoiceEnabled(isVoiceEnabled)
             viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
         }
         .onChange(of: appState.dataSourceMode) { _, mode in
@@ -50,6 +51,9 @@ struct RecognitionModeView: View {
         }
         .onChange(of: viewModel.useDeviceCamera) { _, _ in
             viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
+        }
+        .onChange(of: isVoiceEnabled) { _, enabled in
+            viewModel.setVoiceEnabled(enabled)
         }
         .onDisappear {
             viewModel.stopStreaming()

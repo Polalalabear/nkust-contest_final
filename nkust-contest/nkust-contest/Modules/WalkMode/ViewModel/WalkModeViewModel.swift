@@ -20,6 +20,7 @@ final class WalkModeViewModel {
     var lastFrameReceivedAt: Date?
     var latestFrame: UIImage?
     var highlightedGridCell: GridCell?
+    var modelDetectionText: String = "模型尚未輸出判斷"
 
     private let service: WalkModeServicing
     private let mockAIService: AIService
@@ -124,6 +125,7 @@ final class WalkModeViewModel {
             debugLog("received nil frame")
             connectionStatus = "等待影像中"
             latestFrame = nil
+            modelDetectionText = "等待模型輸入影像"
             return
         }
 
@@ -143,8 +145,12 @@ final class WalkModeViewModel {
                 self.obstacle = result.hasObstacle
                     ? ObstacleInfo(description: "前方偵測到障礙物", distance: distance)
                     : .empty
+                self.modelDetectionText = result.hasObstacle
+                    ? "模型偵測：前方可能有障礙（約 \(distance) 公尺）"
+                    : "模型偵測：前方相對安全"
                 if result.trafficLightRed == true {
                     self.trafficLight = .redLight
+                    self.modelDetectionText = "模型偵測：紅燈，請停止"
                 } else {
                     self.trafficLight = .none
                 }

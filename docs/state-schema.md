@@ -10,6 +10,32 @@ It MUST be updated automatically by the agent AFTER:
 
 ---
 
+### [2026-03-24 22:40]
+
+**Feature**
+- Surface live model inference results directly in UI and add voice prompts when recognition result text changes
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+- /README.md
+
+**State Changes**
+- Walk mode now publishes `modelDetectionText` and renders it on-screen as an "即時判斷" card
+- Recognition mode now tracks voice-enable state and only announces updated recognition text when content changes
+- Recognition voice announcements are routed through `VoiceAnnouncementCenter` with navigation priority
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Duplicate MJPEG connection logs can still appear when multiple stream consumers are active in the flow; this entry only covers model-result UI/voice behavior
+
+---
+
 ### [2026-03-24 22:25]
 
 **Feature**

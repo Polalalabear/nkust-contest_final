@@ -30,6 +30,7 @@ struct WalkModeView: View {
                 } else if !viewModel.obstacle.description.isEmpty {
                     obstacleCard
                 }
+                modelDetectionCard
 
                 directionCard
 
@@ -95,6 +96,17 @@ struct WalkModeView: View {
             subtitle: viewModel.direction.detail
         ) {
             Image(systemName: "location.north.fill")
+        }
+    }
+
+    private var modelDetectionCard: some View {
+        OverlayCard(
+            backgroundColor: Color.black.opacity(0.55),
+            iconLabel: "模型",
+            title: "即時判斷",
+            subtitle: viewModel.modelDetectionText
+        ) {
+            Image(systemName: "brain.head.profile")
         }
     }
 

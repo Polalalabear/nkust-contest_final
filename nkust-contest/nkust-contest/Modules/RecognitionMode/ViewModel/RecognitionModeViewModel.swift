@@ -19,6 +19,8 @@ final class RecognitionModeViewModel {
     private var isStreaming = false
     private var currentMode: DataSourceMode = .mock
     private var isAnalyzingFrame = false
+    private var isVoiceEnabled = true
+    private var lastAnnouncedText: String = ""
 
     init(service: RecognitionModeServicing, streamService: StreamService, mockAIService: AIService, liveAIService: AIService) {
         self.service = service
@@ -62,6 +64,10 @@ final class RecognitionModeViewModel {
         }
     }
 
+    func setVoiceEnabled(_ enabled: Bool) {
+        isVoiceEnabled = enabled
+    }
+
     func stopStreaming() {
         guard isStreaming else { return }
         debugLog("stop stream")
@@ -99,13 +105,26 @@ final class RecognitionModeViewModel {
             let local = await ai.analyzeLocal(frame: frame)
             let cloud = await ai.analyzeCloud(frame: frame)
             await MainActor.run {
-                self.resultDescription = cloud.summary.isEmpty
+                let newDescription = cloud.summary.isEmpty
                     ? (local.hasObstacle ? "模型偵測：前方可能有障礙物" : "模型偵測：前方相對安全")
                     : cloud.summary
+                self.resultDescription = newDescription
                 self.isSuccess = true
+                self.announceIfNeeded(text: newDescription)
                 self.isAnalyzingFrame = false
             }
         }
+    }
+
+    private func announceIfNeeded(text: String) {
+        guard isVoiceEnabled else { return }
+        guard text != lastAnnouncedText else { return }
+        lastAnnouncedText = text
+        VoiceAnnouncementCenter.shared.speak(
+            text,
+            priority: .navigation,
+            interruptLowerPriority: false
+        )
     }
 
     deinit {
