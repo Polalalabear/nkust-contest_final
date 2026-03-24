@@ -729,3 +729,28 @@ It is a **machine-readable development log**
 **Notes**
 - `analyzeCloud` (Gemini) remains stub (no real API call)
 - Distance is currently estimated from detection bbox area for early real-time routing; can be replaced by true depth/distance model output later
+
+---
+
+### [2026-03-24 16:10]
+
+**Feature**
+- Harden MJPEG stream parsing by adding `multipart/x-mixed-replace` boundary handling with JPEG marker fallback
+- Ensure SwiftData/CoreData store safety by creating Application Support directory before persistent store initialization
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/Stream/StreamService.swift
+- /nkust-contest/nkust-contest/App/AppEntry.swift
+- /README.md
+
+**State Changes**
+- Stream parser now tries boundary-part extraction first, then falls back to SOI/EOI marker extraction when boundary is missing
+- Stream parsing remains on background utility queue; frame callback remains on main thread
+- App startup now pre-creates `.applicationSupportDirectory` when missing to prevent store file creation failures
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Change scope is initialization and parser safety only; no architecture/layer refactor

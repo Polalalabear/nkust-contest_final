@@ -1,4 +1,5 @@
 import FirebaseCore
+import Foundation
 import SwiftData
 import SwiftUI
 
@@ -17,6 +18,10 @@ struct AppEntry: App {
     @State private var appState = AppState()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
+    init() {
+        ensureApplicationSupportDirectoryExists()
+    }
+
     var body: some Scene {
         WindowGroup {
             AppRouter()
@@ -26,5 +31,20 @@ struct AppEntry: App {
                     inMemory: false
                 )
         }
+    }
+
+    private func ensureApplicationSupportDirectoryExists() {
+        let fileManager = FileManager.default
+        guard let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return
+        }
+
+        var isDirectory: ObjCBool = false
+        let exists = fileManager.fileExists(atPath: appSupportURL.path, isDirectory: &isDirectory)
+        if exists && isDirectory.boolValue {
+            return
+        }
+
+        try? fileManager.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
     }
 }

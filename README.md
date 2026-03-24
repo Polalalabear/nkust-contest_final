@@ -112,6 +112,8 @@ nkust-contest/nkust-contest/
 - [x] CoreHaptics 自訂節奏（LiveFeedbackManager：強停 / 短短 / 短長）  
 - [x] MJPEG 真實串流服務（`MJPEGStreamService`，URLSession + 手動 JPEG 解析；預設仍遵守階段規則使用 Mock）  
 - [x] `live` 模式主線打通（Stream frame → CoreML/Vision → DecisionEngine → Feedback）  
+- [x] MJPEG parser 強化：支援 `multipart/x-mixed-replace` boundary 解析，並保留 JPEG marker fallback  
+- [x] SwiftData/CoreData 初始化安全：啟動前先確保 `Application Support` 目錄存在，避免 default.store 建檔失敗  
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 
@@ -124,6 +126,14 @@ nkust-contest/nkust-contest/
   3) 生成導航上下文後交給 `DefaultDecisionEngine`  
   4) 經 `LiveFeedbackManager` 輸出語音／震動  
 - Walk / Recognition 背景可顯示最新 frame（無畫面時回退 placeholder）。
+- 串流資料解析在背景 queue 進行，`onFrame` 回主執行緒更新 UI（避免主執行緒阻塞）。
+
+## 持久化初始化安全（CoreData/SwiftData）
+
+- `AppEntry` 啟動時會先檢查並建立 `.applicationSupportDirectory`（若不存在）。
+- 目標是避免 `default.store` 建立前發生：
+  - `Failed to stat path`
+  - `Failed to create file; code = 2`
 
 ## Sources/CoreEngine 檢查（2026-03-24）
 
