@@ -22,6 +22,8 @@ final class AppState {
         }
     }
     var showWalkDebugGrid: Bool = false
+    /// 照護者可調整：超過此距離的目標不觸發導航警示
+    var modelAlertDistanceMeters: Int = 10
 
     var dataSourceMode: DataSourceMode = .mock
 

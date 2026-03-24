@@ -15,6 +15,7 @@ final class PersistedAppSettings {
     var caregiverName: String
     var caregiverRelationship: String
     var caregiverEmergencyPhone: String
+    var modelAlertDistanceMeters: Int
 
     init(
         singletonId: String = "app_settings_singleton",
@@ -25,7 +26,8 @@ final class PersistedAppSettings {
         preferredChartStyleRaw: String = ChartStyle.bar.rawValue,
         caregiverName: String = "王小明",
         caregiverRelationship: String = "子女",
-        caregiverEmergencyPhone: String = "0912-345-678"
+        caregiverEmergencyPhone: String = "0912-345-678",
+        modelAlertDistanceMeters: Int = 10
     ) {
         self.singletonId = singletonId
         self.dataSourceModeRaw = dataSourceModeRaw
@@ -36,6 +38,7 @@ final class PersistedAppSettings {
         self.caregiverName = caregiverName
         self.caregiverRelationship = caregiverRelationship
         self.caregiverEmergencyPhone = caregiverEmergencyPhone
+        self.modelAlertDistanceMeters = modelAlertDistanceMeters
     }
 }
 

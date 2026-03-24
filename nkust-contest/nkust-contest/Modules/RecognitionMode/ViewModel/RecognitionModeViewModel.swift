@@ -21,6 +21,7 @@ final class RecognitionModeViewModel {
     private var isAnalyzingFrame = false
     private var isVoiceEnabled = true
     private var lastAnnouncedText: String = ""
+    private var alertDistanceThresholdMeters: Int = 10
 
     init(service: RecognitionModeServicing, streamService: StreamService, mockAIService: AIService, liveAIService: AIService) {
         self.service = service
@@ -51,11 +52,12 @@ final class RecognitionModeViewModel {
         isSuccess = !message.isEmpty
     }
 
-    func syncStreaming(mode: DataSourceMode, isConnected: Bool) {
+    func syncStreaming(mode: DataSourceMode, isConnected: Bool, alertDistanceThresholdMeters: Int) {
         currentMode = mode
+        self.alertDistanceThresholdMeters = max(1, alertDistanceThresholdMeters)
         let shouldUseLiveStream = mode == .live && useDeviceCamera && isConnected
         isUsingLiveStream = shouldUseLiveStream
-        debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected) useDeviceCamera=\(useDeviceCamera)")
+        debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected) useDeviceCamera=\(useDeviceCamera) alertDistance=\(self.alertDistanceThresholdMeters)m")
 
         if shouldUseLiveStream {
             startStreamingIfNeeded()
@@ -104,7 +106,15 @@ final class RecognitionModeViewModel {
             let ai = self.currentMode == .live ? self.liveAIService : self.mockAIService
             let local = await ai.analyzeLocal(frame: frame)
             await MainActor.run {
-                let newDescription = local.fusion.summary
+                let newDescription: String
+                if let distance = local.estimatedObstacleDistanceMeters,
+                   local.hasObstacle,
+                   distance > self.alertDistanceThresholdMeters {
+                    let label = local.fusion.primaryObject?.label ?? "目標"
+                    newDescription = "辨識到\(label)約 \(distance) 公尺（超過警示距離 \(self.alertDistanceThresholdMeters) 公尺）"
+                } else {
+                    newDescription = local.fusion.summary
+                }
                 self.resultDescription = newDescription
                 self.isSuccess = true
                 self.announceIfNeeded(text: newDescription)

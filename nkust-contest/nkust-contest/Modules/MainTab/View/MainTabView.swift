@@ -27,7 +27,7 @@ struct MainTabView: View {
                 }
             )
         ) {
-            LTCModeView(isVoiceEnabled: $state.isVoiceEnabled, onBack: onBack)
+            LTCModeView(isVoiceEnabled: $state.isVoiceEnabled, onBack: onBack, streamingEnabled: false)
                 .tag(0)
                 .id("ltc-leading-sentinel")
 
@@ -43,7 +43,7 @@ struct MainTabView: View {
                 .tag(3)
                 .id("ltc-main")
 
-            WalkModeView(isVoiceEnabled: $state.isVoiceEnabled, onBack: onBack)
+            WalkModeView(isVoiceEnabled: $state.isVoiceEnabled, onBack: onBack, streamingEnabled: false)
                 .tag(4)
                 .id("walk-trailing-sentinel")
         }

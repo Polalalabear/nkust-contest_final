@@ -67,6 +67,44 @@ It MUST be updated automatically by the agent AFTER:
 
 ---
 
+### [2026-03-24 23:45]
+
+**Feature**
+- Resolve Swift 6 concurrency warnings in `AIService` by actorizing model runners/fusion and aligning async CoreML prediction calls
+- Add caregiver-configurable model alert distance threshold (2~20m) and wire it into live Walk/Recognition warning behavior
+- Reduce duplicate live-stream connections from cyclic sentinel pages by disabling stream start on sentinel-mode views
+- Harden haptics fallback by disabling CoreHaptics after repeated engine start failures and falling back to UIKit feedback
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Services/AI/AIService.swift
+- /nkust-contest/nkust-contest/State/AppState.swift
+- /nkust-contest/nkust-contest/Shared/Persistence/LocalSwiftDataModels.swift
+- /nkust-contest/nkust-contest/Shared/Persistence/AppSettingsPersistence.swift
+- /nkust-contest/nkust-contest/Modules/Dashboard/View/DashboardView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/View/WalkModeView.swift
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/View/RecognitionModeView.swift
+- /nkust-contest/nkust-contest/Modules/RecognitionMode/ViewModel/RecognitionModeViewModel.swift
+- /nkust-contest/nkust-contest/Modules/LTCMode/View/LTCModeView.swift
+- /nkust-contest/nkust-contest/Modules/MainTab/View/MainTabView.swift
+- /nkust-contest/nkust-contest/Services/Feedback/LiveFeedbackManager.swift
+- /README.md
+
+**State Changes**
+- Added app-level `modelAlertDistanceMeters` persisted through SwiftData app settings
+- Walk/Recognition live inference now suppresses navigation alerts when detected target distance exceeds threshold
+- CoreML runner/fusion helper calls are now actor-safe for Swift 6 strict-concurrency mode
+- Sentinel pages no longer start live streams, reducing duplicate MJPEG connection and parser logs
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- If CoreHaptics start fails repeatedly (device/runtime dependent), system now auto-falls back to UIKit haptics and logs one fallback message
+
+---
+
 ## Update Rules (STRICT)
 
 Every update MUST:

@@ -155,21 +155,21 @@ final class CoreMLModelRuntime {
 }
 
 actor LiveModelPipeline {
-    private let debug = AIInferenceDebugConfig.shared
-    private lazy var yoloRunner = try? YOLORunner()
-    private lazy var midasRunner = try? MiDaSRunner()
-    private lazy var pidNetRunner = try? PIDNetRunner()
+    private let debugEnabled = AIInferenceDebugConfig.enabled()
+    private let yoloRunner = YOLORunner()
+    private let midasRunner = MiDaSRunner()
+    private let pidNetRunner = PIDNetRunner()
     private let fusion = FusionAggregator()
 
     func process(frame: UIImage) async throws -> LocalResult {
         let detections = await runYOLO(frame: frame)
         let depth = await runMiDaS(frame: frame, detections: detections)
         let segmentation = await runPIDNet(frame: frame)
-        let fused = fusion.fuse(detections: detections, depth: depth, segmentation: segmentation)
+        let fused = await fusion.fuse(detections: detections, depth: depth, segmentation: segmentation)
         let center = fused.primaryObject.map { CGPoint(x: $0.bbox.midX, y: $0.bbox.midY) }
         let trafficRed = fused.primaryObject?.label.contains("red_light") == true
 
-        if debug.enabled {
+        if debugEnabled {
             let top = detections.max(by: { $0.confidence < $1.confidence })?.label ?? "none"
             let depthText = depth.map { "min=\(String(format: "%.3f", $0.minDepth)) max=\(String(format: "%.3f", $0.maxDepth))" } ?? "n/a"
             let segClass = segmentation?.dominantClass ?? "n/a"
@@ -188,12 +188,8 @@ actor LiveModelPipeline {
     }
 
     private func runYOLO(frame: UIImage) async -> [DetectedObject] {
-        guard let runner = yoloRunner else {
-            await reportNonCritical(title: "YOLO 初始化失敗", details: "模型 runner 無法建立，使用 fallback。")
-            return []
-        }
         do {
-            return try await runner.predict(frame: frame)
+            return try await yoloRunner.predict(frame: frame)
         } catch {
             await reportNonCritical(title: "YOLO 推論失敗", details: error.localizedDescription)
             return []
@@ -201,12 +197,8 @@ actor LiveModelPipeline {
     }
 
     private func runMiDaS(frame: UIImage, detections: [DetectedObject]) async -> DepthResult? {
-        guard let runner = midasRunner else {
-            await reportNonCritical(title: "MiDaS 初始化失敗", details: "模型 runner 無法建立，使用 fallback。")
-            return nil
-        }
         do {
-            return try runner.predict(frame: frame, detections: detections)
+            return try await midasRunner.predict(frame: frame, detections: detections)
         } catch {
             await reportNonCritical(title: "MiDaS 推論失敗", details: error.localizedDescription)
             return nil
@@ -214,12 +206,8 @@ actor LiveModelPipeline {
     }
 
     private func runPIDNet(frame: UIImage) async -> SegmentationResult? {
-        guard let runner = pidNetRunner else {
-            await reportNonCritical(title: "PIDNet 初始化失敗", details: "模型 runner 無法建立，使用 fallback。")
-            return nil
-        }
         do {
-            return try runner.predict(frame: frame)
+            return try await pidNetRunner.predict(frame: frame)
         } catch {
             await reportNonCritical(title: "PIDNet 推論失敗", details: error.localizedDescription)
             return nil
@@ -232,15 +220,12 @@ actor LiveModelPipeline {
 }
 
 private struct AIInferenceDebugConfig {
-    static let shared = AIInferenceDebugConfig()
-    let enabled: Bool
-
-    init() {
-        enabled = UserDefaults.standard.object(forKey: "ai.debug.logs.enabled") as? Bool ?? true
+    nonisolated static func enabled() -> Bool {
+        UserDefaults.standard.object(forKey: "ai.debug.logs.enabled") as? Bool ?? true
     }
 }
 
-private final class CoreMLPackageLoader {
+private actor CoreMLPackageLoader {
     private var cache: [String: MLModel] = [:]
 
     func loadModel(named name: String) throws -> MLModel {
@@ -275,7 +260,7 @@ private final class CoreMLPackageLoader {
     }
 
     private func logFeatureDescriptions(model: MLModel, modelName: String) {
-        guard AIInferenceDebugConfig.shared.enabled else { return }
+        guard AIInferenceDebugConfig.enabled() else { return }
         for (name, desc) in model.modelDescription.inputDescriptionsByName {
             print("[AIFusion][ModelSpec] \(modelName) input \(name) type=\(desc.type.rawValue)")
         }
@@ -285,12 +270,12 @@ private final class CoreMLPackageLoader {
     }
 }
 
-private final class YOLORunner {
+private actor YOLORunner {
     private let loader = CoreMLPackageLoader()
     private var visionModel: VNCoreMLModel?
 
     func predict(frame: UIImage) async throws -> [DetectedObject] {
-        let model = try loader.loadModel(named: "yolo26n")
+        let model = try await loader.loadModel(named: "yolo26n")
         let vnModel: VNCoreMLModel
         if let visionModel {
             vnModel = visionModel
@@ -363,15 +348,15 @@ private final class YOLORunner {
     }
 }
 
-private final class MiDaSRunner {
+private actor MiDaSRunner {
     private let loader = CoreMLPackageLoader()
 
-    func predict(frame: UIImage, detections: [DetectedObject]) throws -> DepthResult {
-        let model = try loader.loadModel(named: "midas_v21_small_256")
+    func predict(frame: UIImage, detections: [DetectedObject]) async throws -> DepthResult {
+        let model = try await loader.loadModel(named: "midas_v21_small_256")
         let inputFeatureName = model.modelDescription.inputDescriptionsByName.keys.first ?? "image"
         let outputFeatureName = model.modelDescription.outputDescriptionsByName.keys.first ?? "var_587"
         let input = try ImageTensorBuilder.makeNormalizedCHW(from: frame, width: 256, height: 256)
-        let output = try model.prediction(from: try MLDictionaryFeatureProvider(dictionary: [inputFeatureName: input]))
+        let output = try await model.prediction(from: try MLDictionaryFeatureProvider(dictionary: [inputFeatureName: input]))
         guard let depthMap = output.featureValue(for: outputFeatureName)?.multiArrayValue else {
             throw CoreMLModelRuntimeError.featureTypeMismatch(model: "MiDaS", feature: outputFeatureName, expected: "MLMultiArray")
         }
@@ -396,15 +381,15 @@ private final class MiDaSRunner {
     }
 }
 
-private final class PIDNetRunner {
+private actor PIDNetRunner {
     private let loader = CoreMLPackageLoader()
 
-    func predict(frame: UIImage) throws -> SegmentationResult {
-        let model = try loader.loadModel(named: "PIDNet_S_Cityscapes_val")
+    func predict(frame: UIImage) async throws -> SegmentationResult {
+        let model = try await loader.loadModel(named: "PIDNet_S_Cityscapes_val")
         let inputFeatureName = model.modelDescription.inputDescriptionsByName.keys.first ?? "image"
         let outputFeatureName = model.modelDescription.outputDescriptionsByName.keys.first ?? "var_420"
         let input = try ImageTensorBuilder.makeNormalizedCHW(from: frame, width: 2048, height: 1024)
-        let output = try model.prediction(from: try MLDictionaryFeatureProvider(dictionary: [inputFeatureName: input]))
+        let output = try await model.prediction(from: try MLDictionaryFeatureProvider(dictionary: [inputFeatureName: input]))
         guard let logits = output.featureValue(for: outputFeatureName)?.multiArrayValue else {
             throw CoreMLModelRuntimeError.featureTypeMismatch(model: "PIDNet", feature: outputFeatureName, expected: "MLMultiArray")
         }
@@ -415,7 +400,7 @@ private final class PIDNetRunner {
     }
 }
 
-private struct FusionAggregator {
+private actor FusionAggregator {
     func fuse(
         detections: [DetectedObject],
         depth: DepthResult?,
@@ -476,7 +461,7 @@ private struct FusionAggregator {
 }
 
 private enum MultiArrayReader {
-    static func rows(of array: MLMultiArray, columns: Int) -> [[Double]] {
+    nonisolated static func rows(of array: MLMultiArray, columns: Int) -> [[Double]] {
         let all = allValues(of: array)
         guard columns > 0 else { return [] }
         let rowCount = all.count / columns
@@ -487,7 +472,7 @@ private enum MultiArrayReader {
         }
     }
 
-    static func allValues(of multiArray: MLMultiArray) -> [Double] {
+    nonisolated static func allValues(of multiArray: MLMultiArray) -> [Double] {
         let pointer = multiArray.dataPointer
         let count = multiArray.count
         switch multiArray.dataType {
@@ -511,7 +496,7 @@ private enum MultiArrayReader {
         }
     }
 
-    static func sampleDepth(in array: MLMultiArray, normalizedROI: CGRect) -> [Double] {
+    nonisolated static func sampleDepth(in array: MLMultiArray, normalizedROI: CGRect) -> [Double] {
         let shape = array.shape.map(\.intValue)
         guard shape.count == 3 else { return [] } // [1, H, W]
         let height = shape[1]
@@ -534,7 +519,7 @@ private enum MultiArrayReader {
         return sampled
     }
 
-    static func semanticHistogram(from logits: MLMultiArray, classLabels: [String]) -> [String: Double] {
+    nonisolated static func semanticHistogram(from logits: MLMultiArray, classLabels: [String]) -> [String: Double] {
         let shape = logits.shape.map(\.intValue)
         guard shape.count == 4 else { return [:] } // [1, C, H, W]
         let classes = shape[1]
@@ -570,7 +555,7 @@ private enum MultiArrayReader {
 }
 
 private enum ImageTensorBuilder {
-    static func makeNormalizedCHW(from image: UIImage, width: Int, height: Int) throws -> MLMultiArray {
+    nonisolated static func makeNormalizedCHW(from image: UIImage, width: Int, height: Int) throws -> MLMultiArray {
         guard let pixelBuffer = ImagePixelBufferBuilder.makePixelBuffer(from: image, width: width, height: height) else {
             throw CoreMLModelRuntimeError.pixelBufferConversionFailed
         }
@@ -607,7 +592,7 @@ private enum ImageTensorBuilder {
 }
 
 private enum ImagePixelBufferBuilder {
-    static func makePixelBuffer(from image: UIImage, width: Int, height: Int) -> CVPixelBuffer? {
+    nonisolated static func makePixelBuffer(from image: UIImage, width: Int, height: Int) -> CVPixelBuffer? {
         let attrs: [CFString: Any] = [
             kCVPixelBufferCGImageCompatibilityKey: true,
             kCVPixelBufferCGBitmapContextCompatibilityKey: true
@@ -648,7 +633,7 @@ private enum ImagePixelBufferBuilder {
 }
 
 private enum PIDNetLabels {
-    static let classes = [
+    nonisolated static let classes = [
         "road", "sidewalk", "building", "wall", "fence", "pole", "traffic_light",
         "traffic_sign", "vegetation", "terrain", "sky", "person", "rider", "car",
         "truck", "bus", "train", "motorcycle", "bicycle"
@@ -656,7 +641,7 @@ private enum PIDNetLabels {
 }
 
 private enum YoloLabelMap {
-    static let labels = [
+    nonisolated static let labels = [
         "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
         "traffic_light", "fire_hydrant", "stop_sign", "parking_meter", "bench", "bird", "cat", "dog",
         "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag",

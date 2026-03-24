@@ -30,6 +30,7 @@ final class WalkModeViewModel {
     private var currentMode: DataSourceMode = .mock
     private var isAnalyzingFrame = false
     private var isVoiceFeedbackEnabled = true
+    private var alertDistanceThresholdMeters: Int = 10
 
     init(
         service: WalkModeServicing,
@@ -74,11 +75,12 @@ final class WalkModeViewModel {
         updateDirectionByDecision(lastDecision)
     }
 
-    func syncStreaming(mode: DataSourceMode, isConnected: Bool) {
+    func syncStreaming(mode: DataSourceMode, isConnected: Bool, alertDistanceThresholdMeters: Int) {
         currentMode = mode
+        self.alertDistanceThresholdMeters = max(1, alertDistanceThresholdMeters)
         let shouldUseLiveStream = mode == .live && isConnected
         isUsingLiveStream = shouldUseLiveStream
-        debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected)")
+        debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected) alertDistance=\(self.alertDistanceThresholdMeters)m")
 
         if shouldUseLiveStream {
             startStreamingIfNeeded()
@@ -143,10 +145,15 @@ final class WalkModeViewModel {
             await MainActor.run {
                 let distance = result.estimatedObstacleDistanceMeters ?? 8
                 let primaryLabel = result.fusion.primaryObject?.label ?? "障礙物"
-                self.obstacle = result.hasObstacle
+                let isWithinAlertRange = distance <= self.alertDistanceThresholdMeters
+                self.obstacle = (result.hasObstacle && isWithinAlertRange)
                     ? ObstacleInfo(description: "前方偵測到\(primaryLabel)", distance: distance)
                     : .empty
-                self.modelDetectionText = result.fusion.summary
+                if result.hasObstacle, !isWithinAlertRange {
+                    self.modelDetectionText = "偵測到\(primaryLabel)約 \(distance) 公尺（超過警示距離 \(self.alertDistanceThresholdMeters) 公尺）"
+                } else {
+                    self.modelDetectionText = result.fusion.summary
+                }
                 if result.trafficLightRed == true {
                     self.trafficLight = .redLight
                     self.modelDetectionText = "模型偵測：紅燈，請停止"

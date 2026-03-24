@@ -30,6 +30,7 @@ enum AppSettingsPersistence {
         appState.caregiverName = settings.caregiverName
         appState.caregiverRelationship = settings.caregiverRelationship
         appState.caregiverEmergencyPhone = settings.caregiverEmergencyPhone
+        appState.modelAlertDistanceMeters = max(1, settings.modelAlertDistanceMeters)
     }
 
     @MainActor
@@ -43,6 +44,7 @@ enum AppSettingsPersistence {
         settings.caregiverName = appState.caregiverName
         settings.caregiverRelationship = appState.caregiverRelationship
         settings.caregiverEmergencyPhone = appState.caregiverEmergencyPhone
+        settings.modelAlertDistanceMeters = appState.modelAlertDistanceMeters
         try context.save()
     }
 

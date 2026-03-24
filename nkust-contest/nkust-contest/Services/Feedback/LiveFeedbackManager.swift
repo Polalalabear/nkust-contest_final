@@ -11,6 +11,7 @@ final class LiveFeedbackManager: FeedbackManager {
     private let fallbackHeavyImpact = UIImpactFeedbackGenerator(style: .heavy)
     private var hapticEngine: CHHapticEngine?
     private var supportsHaptics = false
+    private var hapticStartFailureCount = 0
 
     private var isMuted = false
     private var lastSpokenText: String = ""
@@ -147,6 +148,7 @@ final class LiveFeedbackManager: FeedbackManager {
             hapticEngine = try CHHapticEngine()
             hapticEngine?.isAutoShutdownEnabled = true
             try hapticEngine?.start()
+            hapticStartFailureCount = 0
         } catch {
             supportsHaptics = false
             hapticEngine = nil
@@ -166,7 +168,19 @@ final class LiveFeedbackManager: FeedbackManager {
                 fallback()
                 return
             }
-            try? hapticEngine.start()
+            do {
+                try hapticEngine.start()
+                hapticStartFailureCount = 0
+            } catch {
+                hapticStartFailureCount += 1
+                if hapticStartFailureCount >= 3 {
+                    supportsHaptics = false
+                    self.hapticEngine = nil
+                    print("[Haptics] disable CoreHaptics after repeated start failures; fallback to UIKit")
+                }
+                fallback()
+                return
+            }
             let pattern = try CHHapticPattern(events: events, parameters: [])
             let player = try hapticEngine.makePlayer(with: pattern)
             try player.start(atTime: 0)

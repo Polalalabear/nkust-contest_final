@@ -157,6 +157,9 @@ struct SummaryView: View {
             .onChange(of: appState.preferredChartStyle) { _, _ in
                 AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
             }
+            .onChange(of: appState.modelAlertDistanceMeters) { _, _ in
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
+            }
         }
     }
 
@@ -565,6 +568,17 @@ struct PreferencesView: View {
                 }
                 .pickerStyle(.inline)
                 .labelsHidden()
+            }
+
+            Section("模型警示距離") {
+                Stepper(value: $state.modelAlertDistanceMeters, in: 2...20, step: 1) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("警示距離：\(appState.modelAlertDistanceMeters) 公尺")
+                        Text("超過此距離的目標僅顯示，不觸發導航警示。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Section("預覽") {

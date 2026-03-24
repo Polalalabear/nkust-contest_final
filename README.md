@@ -120,7 +120,8 @@ nkust-contest/nkust-contest/
 - [x] 連線韌性：初始連線寬限 8s、URLSession 強制 WiFi、coordinator 自動重試（最多 5 次退避）  
 - [x] 修正連線偵測迴圈：進入主流程時保留健康狀態，不再因 coordinator 停止而重設為 disconnected  
 - [x] 手動重新連線：DeviceInfoView 未連線時顯示「重新連線」按鈕 + 即時連線狀態文字（連線中/已連接/訊號不穩/未連接）  
-- [x] SwiftData 寫入防抖：Dashboard 設定變更改為 debounce 儲存，降低主執行緒連續 `context.save()` 壓力  
+- [x] SwiftData 寫入防抖：Dashboard 設定變更改為 debounce 儲存，降低主執行緒連續 `context.save()` 壓力
+- [x] 照護者偏好新增模型警示距離（2~20m），可調整 live 導航提示門檻
 - [ ] CSV 實際匯出  
 - [ ] Firebase Auth 與欄位級安全規則落地  
 
@@ -137,6 +138,7 @@ nkust-contest/nkust-contest/
 - 相機背景容器已固定為全畫面尺寸並強制裁切（`scaledToFill + clipped`），避免不同 frame 尺寸造成上層 UI 版面位移。
 - 視障者裝置資訊中的「手機電量」改為讀取 iOS 裝置即時電量（`UIDevice.batteryLevel`），不再依賴雲端欄位。
 - Walk 與 Recognition 會把融合結果（物件/距離/語意可通行）即時反映到畫面卡片；Recognition 在判斷文字變化時會觸發語音播報（受語音開關控制）。
+- 照護者可於「設定偏好」調整模型警示距離；超過閾值的目標僅顯示辨識文字，不觸發導航警示。
 
 ## ESP32 MJPEG 切幀技術細節
 

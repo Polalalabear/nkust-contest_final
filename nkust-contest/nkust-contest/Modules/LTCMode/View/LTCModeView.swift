@@ -4,6 +4,7 @@ struct LTCModeView: View {
     @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool
     var onBack: (() -> Void)?
+    var streamingEnabled: Bool = true
     @State private var viewModel = LTCModeViewModel()
 
     var body: some View {
@@ -42,13 +43,13 @@ struct LTCModeView: View {
             }
         }
         .onAppear {
-            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
+            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected && streamingEnabled)
         }
         .onChange(of: appState.dataSourceMode) { _, mode in
-            viewModel.syncStreaming(mode: mode, isConnected: appState.effectiveDeviceConnected)
+            viewModel.syncStreaming(mode: mode, isConnected: appState.effectiveDeviceConnected && streamingEnabled)
         }
         .onChange(of: appState.effectiveDeviceConnected) { _, connected in
-            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: connected)
+            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: connected && streamingEnabled)
         }
         .onDisappear {
             viewModel.stopStreaming()

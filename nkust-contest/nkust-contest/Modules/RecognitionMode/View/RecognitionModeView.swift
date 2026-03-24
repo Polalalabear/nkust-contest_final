@@ -5,6 +5,7 @@ struct RecognitionModeView: View {
     @Environment(AppState.self) private var appState
     @Binding var isVoiceEnabled: Bool
     var onBack: (() -> Void)?
+    var streamingEnabled: Bool = true
     @State private var viewModel = RecognitionModeViewModel()
 
     var body: some View {
@@ -41,16 +42,39 @@ struct RecognitionModeView: View {
         }
         .onAppear {
             viewModel.setVoiceEnabled(isVoiceEnabled)
-            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
+            viewModel.syncStreaming(
+                mode: appState.dataSourceMode,
+                isConnected: appState.effectiveDeviceConnected && streamingEnabled,
+                alertDistanceThresholdMeters: appState.modelAlertDistanceMeters
+            )
         }
         .onChange(of: appState.dataSourceMode) { _, mode in
-            viewModel.syncStreaming(mode: mode, isConnected: appState.effectiveDeviceConnected)
+            viewModel.syncStreaming(
+                mode: mode,
+                isConnected: appState.effectiveDeviceConnected && streamingEnabled,
+                alertDistanceThresholdMeters: appState.modelAlertDistanceMeters
+            )
         }
         .onChange(of: appState.effectiveDeviceConnected) { _, connected in
-            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: connected)
+            viewModel.syncStreaming(
+                mode: appState.dataSourceMode,
+                isConnected: connected && streamingEnabled,
+                alertDistanceThresholdMeters: appState.modelAlertDistanceMeters
+            )
         }
         .onChange(of: viewModel.useDeviceCamera) { _, _ in
-            viewModel.syncStreaming(mode: appState.dataSourceMode, isConnected: appState.effectiveDeviceConnected)
+            viewModel.syncStreaming(
+                mode: appState.dataSourceMode,
+                isConnected: appState.effectiveDeviceConnected && streamingEnabled,
+                alertDistanceThresholdMeters: appState.modelAlertDistanceMeters
+            )
+        }
+        .onChange(of: appState.modelAlertDistanceMeters) { _, threshold in
+            viewModel.syncStreaming(
+                mode: appState.dataSourceMode,
+                isConnected: appState.effectiveDeviceConnected && streamingEnabled,
+                alertDistanceThresholdMeters: threshold
+            )
         }
         .onChange(of: isVoiceEnabled) { _, enabled in
             viewModel.setVoiceEnabled(enabled)
