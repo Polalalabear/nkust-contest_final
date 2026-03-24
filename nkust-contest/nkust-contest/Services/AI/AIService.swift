@@ -76,7 +76,7 @@ final class LiveAIService: AIService {
 enum CoreMLModelRuntimeError: LocalizedError {
     case missingModel(name: String)
     case unsupportedPackageLayout(name: String)
-    case missingModelPackage(path: String)
+    case missingBundledModelPackage(name: String)
     case frameConversionFailed
     case visionRequestFailed(details: String)
     case unsupportedVisionOutput
@@ -87,8 +87,8 @@ enum CoreMLModelRuntimeError: LocalizedError {
             return "找不到模型資源：\(name).mlmodelc / \(name).mlpackage"
         case .unsupportedPackageLayout(let name):
             return "模型包不完整：\(name).mlpackage 缺少 Data/com.apple.CoreML/model.mlmodel 或 weights"
-        case .missingModelPackage(let path):
-            return "模型包不存在：\(path)"
+        case .missingBundledModelPackage(let name):
+            return "Bundle 內找不到模型包：\(name).mlpackage（請確認已加入 Copy Bundle Resources）"
         case .frameConversionFailed:
             return "影像格式轉換失敗：無法取得可供 Vision 推論的 CGImage。"
         case .visionRequestFailed(let details):
@@ -101,7 +101,6 @@ enum CoreMLModelRuntimeError: LocalizedError {
 
 final class CoreMLModelRuntime {
     private let localModelName = "yolo26n"
-    private let packageBaseRelativePath = "Sources/CoreEngine"
     private var cachedModelURL: URL?
     private var cachedVisionModel: VNCoreMLModel?
 
@@ -135,24 +134,16 @@ final class CoreMLModelRuntime {
             return compiled
         }
 
-        if let package = Bundle.main.url(forResource: name, withExtension: "mlpackage"),
-           isValidPackageLayout(package) {
-            return package
+        guard let package = Bundle.main.url(forResource: name, withExtension: "mlpackage") else {
+            throw CoreMLModelRuntimeError.missingBundledModelPackage(name: name)
         }
-
-        if let package = Bundle.main.resourceURL?
-            .appendingPathComponent(packageBaseRelativePath)
-            .appendingPathComponent("\(name).mlpackage") {
-            guard FileManager.default.fileExists(atPath: package.path) else {
-                throw CoreMLModelRuntimeError.missingModelPackage(path: package.path)
-            }
-            guard isValidPackageLayout(package) else {
-                throw CoreMLModelRuntimeError.unsupportedPackageLayout(name: name)
-            }
-            return package
+        guard isValidPackageLayout(package) else {
+            throw CoreMLModelRuntimeError.unsupportedPackageLayout(name: name)
         }
+        return package
 
-        throw CoreMLModelRuntimeError.missingModel(name: name)
+        // 保留在上方路徑分支已覆蓋，此行不會觸發；作為防禦式回退。
+        // throw CoreMLModelRuntimeError.missingModel(name: name)
     }
 
     private func isValidPackageLayout(_ packageURL: URL) -> Bool {
