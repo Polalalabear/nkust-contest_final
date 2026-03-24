@@ -105,6 +105,26 @@ It MUST be updated automatically by the agent AFTER:
 
 ---
 
+### [2026-03-24 23:51]
+
+**Feature**
+- Prevent false positive voice warning on Walk mode entry when caregiver alert-distance threshold is lower than default mock obstacle distance
+
+**Modules Affected**
+- /nkust-contest/nkust-contest/Modules/WalkMode/ViewModel/WalkModeViewModel.swift
+
+**State Changes**
+- Walk mode initial `obstacle` state changed from `.mock` to `.empty`, so first `refreshNavigation` no longer announces a stale 8m obstacle before live inference result arrives
+
+**Test Coverage**
+- xcodebuild: `-project nkust-contest/nkust-contest.xcodeproj -scheme nkust-contest -destination 'generic/platform=iOS' -derivedDataPath ./DerivedData build`
+- Result: PASS
+
+**Notes**
+- Live voice guidance now waits for real per-frame inference context instead of startup mock obstacle context
+
+---
+
 ## Update Rules (STRICT)
 
 Every update MUST:

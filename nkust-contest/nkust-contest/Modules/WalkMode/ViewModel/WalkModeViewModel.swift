@@ -10,7 +10,7 @@ final class WalkModeViewModel {
         let col: Int
     }
 
-    var obstacle: ObstacleInfo = .mock
+    var obstacle: ObstacleInfo = .empty
     var direction: DirectionInfo = .turnRight
     var trafficLight: TrafficLightInfo = .none
     var connectionStatus: String = "已連接"
