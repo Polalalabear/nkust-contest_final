@@ -328,8 +328,8 @@ final class StreamHealthCoordinator {
     private var isMonitoring = false
     private var currentState: StreamHealthState = .disconnected
 
-    init(monitorService: StreamService = MJPEGStreamService()) {
-        self.monitorService = monitorService
+    init(monitorService: StreamService? = nil) {
+        self.monitorService = monitorService ?? MJPEGStreamService()
         self.monitorService.onHealthChange = { [weak self] state in
             Task { @MainActor [weak self] in
                 self?.apply(state: state)

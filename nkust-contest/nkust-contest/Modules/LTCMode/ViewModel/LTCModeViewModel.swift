@@ -19,12 +19,14 @@ final class LTCModeViewModel {
     private var isStreaming = false
 
     init(
-        service: LTCModeServicing = StubLTCModeService(),
-        streamService: StreamService = StreamServiceFactory.makeDefault()
+        service: LTCModeServicing? = nil,
+        streamService: StreamService? = nil
     ) {
-        self.service = service
-        self.streamService = streamService
-        let loaded = service.fetchContacts()
+        let resolvedService = service ?? StubLTCModeService()
+        let resolvedStreamService = streamService ?? StreamServiceFactory.makeDefault()
+        self.service = resolvedService
+        self.streamService = resolvedStreamService
+        let loaded = resolvedService.fetchContacts()
         self.contacts = loaded.map {
             ContactInfo(id: $0.id, name: $0.name, isAvailable: Bool.random())
         }
