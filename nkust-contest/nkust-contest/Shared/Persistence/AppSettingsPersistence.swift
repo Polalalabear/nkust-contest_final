@@ -30,7 +30,9 @@ enum AppSettingsPersistence {
         appState.caregiverName = settings.caregiverName
         appState.caregiverRelationship = settings.caregiverRelationship
         appState.caregiverEmergencyPhone = settings.caregiverEmergencyPhone
-        appState.modelAlertDistanceMeters = max(1, settings.modelAlertDistanceMeters)
+        appState.visUserPhone = settings.visUserPhone ?? "0912-000-000"
+        let persistedDistance = settings.modelAlertDistanceMeters ?? 10
+        appState.modelAlertDistanceMeters = min(max(2, persistedDistance), 15)
     }
 
     @MainActor
@@ -44,6 +46,7 @@ enum AppSettingsPersistence {
         settings.caregiverName = appState.caregiverName
         settings.caregiverRelationship = appState.caregiverRelationship
         settings.caregiverEmergencyPhone = appState.caregiverEmergencyPhone
+        settings.visUserPhone = appState.visUserPhone
         settings.modelAlertDistanceMeters = appState.modelAlertDistanceMeters
         try context.save()
     }

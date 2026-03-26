@@ -37,6 +37,7 @@ final class AppState {
     var caregiverName: String = "王小明"
     var caregiverRelationship: String = "子女"
     var caregiverEmergencyPhone: String = "0912-345-678"
+    var visUserPhone: String = "0912-000-000"
 
     var visUserLatitude: Double = 22.6273
     var visUserLongitude: Double = 120.3014

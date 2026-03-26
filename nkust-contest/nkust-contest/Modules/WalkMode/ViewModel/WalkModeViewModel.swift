@@ -77,7 +77,7 @@ final class WalkModeViewModel {
 
     func syncStreaming(mode: DataSourceMode, isConnected: Bool, alertDistanceThresholdMeters: Int) {
         currentMode = mode
-        self.alertDistanceThresholdMeters = max(1, alertDistanceThresholdMeters)
+        self.alertDistanceThresholdMeters = min(max(2, alertDistanceThresholdMeters), 15)
         let shouldUseLiveStream = mode == .live && isConnected
         isUsingLiveStream = shouldUseLiveStream
         debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected) alertDistance=\(self.alertDistanceThresholdMeters)m")

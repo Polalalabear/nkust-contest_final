@@ -129,7 +129,7 @@ nkust-contest/nkust-contest/
 
 - `mock` 模式維持原行為（測試資料 + 可切換模擬連線）。
 - `live` 模式目前會嘗試：
-  1) 連 ESP32 MJPEG（`http://192.168.4.1/stream`）  
+  1) 連 ESP32 MJPEG（`http://172.20.10.3/stream`，STA 模式 / 手機熱點）  
   2) 每幀送入 `LiveAIService`（CoreML + Vision）  
   3) 生成導航上下文後交給 `DefaultDecisionEngine`  
   4) 經 `LiveFeedbackManager` 輸出語音／震動  
@@ -242,7 +242,7 @@ Console 驗證：啟動時應依序看到：
 
 ### 1) ESP32 串流是否正確連線
 
-1. iPhone 先手動連上 `XIAO-S3-CAM`（密碼 `password123`）。
+1. 確認 ESP32 已連上**測試手機熱點**（STA 模式），ESP32 分配到 IP `172.20.10.3`；iPhone 連至相同的手機熱點網路（與 ESP32 同子網段）。
 2. 進入照護者主控台，切到「真實資料」模式（`DataSourceMode.live`）。
 3. 進入視障者 `Walk` / `Recognition` / `LTC`，確認畫面背景會更新為 ESP32 frame；若來源暫時中斷，應顯示 placeholder 並可在 Console 看到 `received nil frame` log。
 4. 若切回「測試資料」模式（`mock`），串流應立即停止（只走 Mock）。

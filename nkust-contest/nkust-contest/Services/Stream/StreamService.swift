@@ -57,6 +57,9 @@ final class MJPEGStreamService: NSObject, StreamService {
     var onHealthChange: ((StreamHealthState) -> Void)?
 
     private let streamURL: URL
+    private var activeStreamURL: URL
+    // ESP32 韌體只監聽 port 80，永遠不做 :81 fallback
+    private var didAttemptPort81Fallback = true
     private let staleTimeout: TimeInterval
     private var session: URLSession?
     private var task: URLSessionDataTask?
@@ -73,30 +76,35 @@ final class MJPEGStreamService: NSObject, StreamService {
     private let initialConnectGrace: TimeInterval
 
     init(
-        url: URL = URL(string: "http://192.168.4.1/stream")!,
+        url: URL = URL(string: "http://172.20.10.3/stream")!,
         staleTimeout: TimeInterval = 2.5,
         initialConnectGrace: TimeInterval = 8.0
     ) {
         self.streamURL = url
+        self.activeStreamURL = url
         self.staleTimeout = staleTimeout
         self.initialConnectGrace = initialConnectGrace
     }
 
     func start() {
         guard task == nil else { return }
-        debugLog("start stream request \(streamURL.absoluteString)")
+        debugLog("start stream request \(activeStreamURL.absoluteString)")
         transition(to: .connecting, reason: "start() invoked")
         startHealthMonitorIfNeeded()
 
         let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 15
-        configuration.timeoutIntervalForResource = 60 * 5
-        configuration.allowsCellularAccess = false
-        configuration.waitsForConnectivity = false
+        configuration.timeoutIntervalForRequest = 20
+        configuration.timeoutIntervalForResource = 60 * 10
+        // allowsCellularAccess 不限制：熱點環境下路由可能走 bridge 介面
+        configuration.allowsCellularAccess = true
+        // waitsForConnectivity = true：路徑未就緒時等待，而非立即失敗
+        configuration.waitsForConnectivity = true
+        // Local camera stream should never go through system HTTP proxy / relay.
+        configuration.connectionProxyDictionary = [:]
 
         let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
         self.session = session
-        let task = session.dataTask(with: streamURL)
+        let task = session.dataTask(with: activeStreamURL)
         self.task = task
         task.resume()
     }
@@ -110,6 +118,8 @@ final class MJPEGStreamService: NSObject, StreamService {
         session = nil
         stopHealthMonitor()
         transition(to: .disconnected, reason: "stop() invoked")
+        // didAttemptPort81Fallback 不重設：韌體只用 port 80，永遠跳過 :81
+        activeStreamURL = streamURL
         processingQueue.async { [weak self] in
             self?.buffer.removeAll(keepingCapacity: false)
             self?.boundaryMarker = nil
@@ -173,7 +183,11 @@ final class MJPEGStreamService: NSObject, StreamService {
 
         let grace = didReceiveFirstFrame ? staleTimeout : initialConnectGrace
         if now.timeIntervalSince(stateSinceAt) > grace {
-            debugLog("timeout stale while connecting (grace=\(String(format: "%.1f", grace))s)")
+            debugLog(
+                "timeout stale while connecting (grace=\(String(format: "%.1f", grace))s)"
+            )
+            // 未收到任何可解析的 MJPEG frame 時，通常代表 endpoint path 或格式需要確認。
+            debugLog("目前 endpoint path 需要確認（connecting timeout、尚未收到 valid MJPEG frame）")
             transition(to: .stale, reason: "connecting timeout > \(String(format: "%.1f", grace))s")
         }
     }
@@ -289,6 +303,8 @@ extension MJPEGStreamService: URLSessionDataDelegate {
         _ = dataTask
         if let http = response as? HTTPURLResponse {
             debugLog("connected status=\(http.statusCode)")
+            let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? "nil"
+            debugLog("response Content-Type=\(contentType)")
         } else {
             debugLog("connected with non-http response")
         }
@@ -319,13 +335,31 @@ extension MJPEGStreamService: URLSessionDataDelegate {
 
         // 失敗時僅回傳 nil frame，不 crash、不做激進重試。
         if let error {
-            debugLog("stream finished with error: \(error.localizedDescription)")
-            transition(to: .disconnected, reason: "didCompleteWithError")
+            let ns = error as NSError
+            debugLog("stream finished with error: \(ns.localizedDescription) (domain=\(ns.domain) code=\(ns.code))")
+            if let underlying = ns.userInfo[NSUnderlyingErrorKey] as? NSError {
+                debugLog("underlying error: domain=\(underlying.domain) code=\(underlying.code)")
+            }
+
+            // 韌體只用 port 80，不做 :81 fallback；直接回報 disconnected 讓 coordinator 重試
+            transition(to: .disconnected, reason: "didCompleteWithError (\(ns.code))")
             emit(frame: nil)
         } else {
             debugLog("stream finished normally")
             transition(to: .disconnected, reason: "stream ended")
         }
+    }
+}
+
+private extension MJPEGStreamService {
+    static func port81FallbackURL(from url: URL) -> URL? {
+        guard url.scheme?.lowercased() == "http" else { return nil }
+        guard url.host != nil else { return nil }
+        // 若原本就有指定 port，就不做猜測。
+        guard url.port == nil else { return nil }
+        var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        comps?.port = 81
+        return comps?.url
     }
 }
 

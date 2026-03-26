@@ -21,7 +21,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		10F1F0002FA2100000F1F100 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		10F1F0002FA2100000F1F100 /* Exceptions for "nkust-contest" folder in "nkust-contest" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -34,7 +34,7 @@
 		103CB9032F6BCFEF006DB466 /* nkust-contest */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				10F1F0002FA2100000F1F100 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				10F1F0002FA2100000F1F100 /* Exceptions for "nkust-contest" folder in "nkust-contest" target */,
 			);
 			path = "nkust-contest";
 			sourceTree = "<group>";

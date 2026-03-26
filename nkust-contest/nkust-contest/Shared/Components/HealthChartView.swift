@@ -92,7 +92,8 @@ struct HealthChartView: View {
             let avg = chunk.reduce(0.0) { $0 + metric.value(from: $1) } / Double(chunk.count)
             let startDate = chunk.first!.date.shortMD
             let endDate = chunk.last!.date.shortMD
-            result.append((label: "\(startDate)–\(endDate)", value: avg))
+            let label = (startDate == endDate) ? startDate : "\(startDate)–\(endDate)"
+            result.append((label: label, value: avg))
         }
         return result
     }

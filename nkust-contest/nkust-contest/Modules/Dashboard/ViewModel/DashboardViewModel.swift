@@ -8,6 +8,12 @@ import UIKit
 @MainActor
 @Observable
 final class DashboardViewModel {
+    enum LocationRefreshResult {
+        case success
+        case permissionRequired
+        case failed
+    }
+
     /// 主控台圖表用（最近 7 天）
     var weekRecords: [DailyHealthRecord] = DailyHealthRecord.mockWeek()
     /// 詳情 / 全部健康資料用（最多 90 天）
@@ -22,24 +28,35 @@ final class DashboardViewModel {
 
     private let service: DashboardServicing
     private var syncTask: Task<Void, Never>?
+    private var locationAgent: OneShotLocationAgent?
 
     init(service: DashboardServicing? = nil) {
         self.service = service ?? StubDashboardService()
     }
 
-    func callUser() {
-        service.callUser()
+    func callUser(phoneNumber: String) {
+        service.callUser(phoneNumber: phoneNumber)
     }
 
     func fetchVisUserLocation() {
         isShowingLocation = true
     }
 
-    func copyVisUserLocation(appState: AppState) async -> Bool {
-        let coordinate = CLLocationCoordinate2D(
-            latitude: appState.visUserLatitude,
-            longitude: appState.visUserLongitude
-        )
+    func copyVisUserLocation(appState: AppState) async -> LocationRefreshResult {
+        let coordinate: CLLocationCoordinate2D
+        do {
+            let latest = try await requestCurrentLocation()
+            coordinate = latest
+            appState.visUserLatitude = latest.latitude
+            appState.visUserLongitude = latest.longitude
+            appState.isLocationSharing = true
+        } catch OneShotLocationAgent.LocationError.permissionDenied {
+            appState.isLocationSharing = false
+            return .permissionRequired
+        } catch {
+            return .failed
+        }
+
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let address = await resolveAddress(from: location)
         let latlon = String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
@@ -47,7 +64,7 @@ final class DashboardViewModel {
         UIPasteboard.general.string = payload
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         print("[Dashboard] copied location payload: \(payload)")
-        return true
+        return .success
     }
 
     func showNearestHospital(appState: AppState) {
@@ -242,4 +259,79 @@ final class DashboardViewModel {
         return name.contains("醫院") || name.contains("hospital") || name.contains("medical")
     }
 
+    private func requestCurrentLocation() async throws -> CLLocationCoordinate2D {
+        let agent = OneShotLocationAgent()
+        locationAgent = agent
+        defer { locationAgent = nil }
+        return try await agent.requestLocation()
+    }
+
+}
+
+@MainActor
+private final class OneShotLocationAgent: NSObject, CLLocationManagerDelegate {
+    enum LocationError: Error {
+        case permissionDenied
+        case unavailable
+    }
+
+    private let manager = CLLocationManager()
+    private var continuation: CheckedContinuation<CLLocationCoordinate2D, Error>?
+    private var timeoutTask: Task<Void, Never>?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+    }
+
+    func requestLocation() async throws -> CLLocationCoordinate2D {
+        let status = manager.authorizationStatus
+        if status == .denied || status == .restricted {
+            throw LocationError.permissionDenied
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            if status == .notDetermined {
+                manager.requestWhenInUseAuthorization()
+            } else {
+                manager.requestLocation()
+            }
+            timeoutTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 8_000_000_000)
+                self?.finish(with: .failure(LocationError.unavailable))
+            }
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        if status == .authorizedAlways || status == .authorizedWhenInUse {
+            manager.requestLocation()
+        } else if status == .denied || status == .restricted {
+            finish(with: .failure(LocationError.permissionDenied))
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let latest = locations.last else {
+            finish(with: .failure(LocationError.unavailable))
+            return
+        }
+        finish(with: .success(latest.coordinate))
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        finish(with: .failure(LocationError.unavailable))
+    }
+
+    private func finish(with result: Result<CLLocationCoordinate2D, Error>) {
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        manager.stopUpdatingLocation()
+        guard let continuation else { return }
+        self.continuation = nil
+        continuation.resume(with: result)
+    }
 }

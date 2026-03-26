@@ -15,7 +15,10 @@ final class PersistedAppSettings {
     var caregiverName: String
     var caregiverRelationship: String
     var caregiverEmergencyPhone: String
-    var modelAlertDistanceMeters: Int
+    /// 視障者手機號碼（migration-safe: 可為 nil，讀取時回填預設）
+    var visUserPhone: String?
+    /// 新增欄位：為了舊 store migration，允許為 nil，讀取時再套用預設值。
+    var modelAlertDistanceMeters: Int?
 
     init(
         singletonId: String = "app_settings_singleton",
@@ -27,7 +30,8 @@ final class PersistedAppSettings {
         caregiverName: String = "王小明",
         caregiverRelationship: String = "子女",
         caregiverEmergencyPhone: String = "0912-345-678",
-        modelAlertDistanceMeters: Int = 10
+        visUserPhone: String? = nil,
+        modelAlertDistanceMeters: Int? = 10
     ) {
         self.singletonId = singletonId
         self.dataSourceModeRaw = dataSourceModeRaw
@@ -38,6 +42,7 @@ final class PersistedAppSettings {
         self.caregiverName = caregiverName
         self.caregiverRelationship = caregiverRelationship
         self.caregiverEmergencyPhone = caregiverEmergencyPhone
+        self.visUserPhone = visUserPhone
         self.modelAlertDistanceMeters = modelAlertDistanceMeters
     }
 }

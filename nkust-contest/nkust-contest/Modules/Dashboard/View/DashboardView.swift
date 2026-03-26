@@ -10,7 +10,7 @@ struct DashboardView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("主控台", systemImage: "heart.fill", value: .summary) {
+            Tab("主控台", systemImage: "gauge", value: .summary) {
                 SummaryView(onBack: onBack)
             }
 
@@ -36,6 +36,8 @@ struct SummaryView: View {
     @State private var viewModel = DashboardViewModel()
     @State private var showProfile = false
     @State private var showLocationCopiedAlert = false
+    @State private var showLocationPermissionAlert = false
+    @State private var showLocationFailedAlert = false
     var onBack: (() -> Void)?
 
     var body: some View {
@@ -140,6 +142,16 @@ struct SummaryView: View {
                 Button("確定", role: .cancel) {}
             } message: {
                 Text("已複製地址與經緯度。")
+            }
+            .alert("需要定位權限", isPresented: $showLocationPermissionAlert) {
+                Button("知道了", role: .cancel) {}
+            } message: {
+                Text("請允許此 App 使用位置資訊後，再重新取得即時位置。")
+            }
+            .alert("無法取得位置", isPresented: $showLocationFailedAlert) {
+                Button("知道了", role: .cancel) {}
+            } message: {
+                Text("目前無法取得當下定位，請稍後再試。")
             }
             .onChange(of: appState.dataSourceMode) { _, newMode in
                 viewModel.syncDataSource(mode: newMode, appState: appState, modelContext: modelContext)
@@ -251,9 +263,14 @@ struct SummaryView: View {
         VStack(spacing: 12) {
             Button {
                 Task {
-                    let didCopy = await viewModel.copyVisUserLocation(appState: appState)
-                    if didCopy {
+                    let result = await viewModel.copyVisUserLocation(appState: appState)
+                    switch result {
+                    case .success:
                         showLocationCopiedAlert = true
+                    case .permissionRequired:
+                        showLocationPermissionAlert = true
+                    case .failed:
+                        showLocationFailedAlert = true
                     }
                 }
             } label: {
@@ -289,8 +306,6 @@ struct SummaryView: View {
                 )
             }
             .buttonStyle(.plain)
-            .disabled(!appState.isLocationSharing)
-            .opacity(appState.isLocationSharing ? 1 : 0.6)
             .accessibilityLabel("一鍵取得視障者即時位置")
 
             Button {
@@ -322,6 +337,8 @@ struct SummaryView: View {
                 )
             }
             .buttonStyle(.plain)
+            .disabled(!appState.isLocationSharing)
+            .opacity(appState.isLocationSharing ? 1 : 0.6)
             .accessibilityLabel("顯示距離視障者最近醫院")
         }
     }
@@ -330,7 +347,7 @@ struct SummaryView: View {
 
     private var quickCallButton: some View {
         Button {
-            viewModel.callUser()
+            viewModel.callUser(phoneNumber: appState.visUserPhone)
         } label: {
             Label("快速通話", systemImage: "phone.fill")
                 .font(.headline)
@@ -452,31 +469,46 @@ struct ProfileSheetView: View {
                 Section("個人資料") {
                     if isEditing {
                         HStack {
-                            Text("姓名")
+                            Text("照護者姓名")
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            TextField("姓名", text: $state.caregiverName)
+                            TextField("照護者姓名", text: $state.caregiverName)
                                 .multilineTextAlignment(.trailing)
                         }
                         HStack {
-                            Text("關係")
+                            Text("照護者關係")
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            TextField("關係", text: $state.caregiverRelationship)
+                            TextField("照護者關係", text: $state.caregiverRelationship)
                                 .multilineTextAlignment(.trailing)
                         }
                         HStack {
-                            Text("緊急聯絡電話")
+                            Text("照護者電話")
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            TextField("電話", text: $state.caregiverEmergencyPhone)
+                            TextField("照護者電話", text: $state.caregiverEmergencyPhone)
                                 .multilineTextAlignment(.trailing)
                                 .keyboardType(.phonePad)
                         }
                     } else {
-                        LabeledContent("姓名", value: appState.caregiverName)
-                        LabeledContent("關係", value: appState.caregiverRelationship)
-                        LabeledContent("緊急聯絡電話", value: appState.caregiverEmergencyPhone)
+                        LabeledContent("照護者姓名", value: appState.caregiverName)
+                        LabeledContent("照護者關係", value: appState.caregiverRelationship)
+                        LabeledContent("照護者電話", value: appState.caregiverEmergencyPhone)
+                    }
+                }
+
+                Section("視障者資料") {
+                    if isEditing {
+                        HStack {
+                            Text("視障者手機號碼")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            TextField("視障者手機號碼", text: $state.visUserPhone)
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.phonePad)
+                        }
+                    } else {
+                        LabeledContent("視障者手機號碼", value: appState.visUserPhone)
                     }
                 }
 
@@ -571,7 +603,7 @@ struct PreferencesView: View {
             }
 
             Section("模型警示距離") {
-                Stepper(value: $state.modelAlertDistanceMeters, in: 2...20, step: 1) {
+                Stepper(value: $state.modelAlertDistanceMeters, in: 2...15, step: 1) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("警示距離：\(appState.modelAlertDistanceMeters) 公尺")
                         Text("超過此距離的目標僅顯示，不觸發導航警示。")
@@ -579,15 +611,6 @@ struct PreferencesView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-            }
-
-            Section("預覽") {
-                HealthChartView(
-                    records: DailyHealthRecord.mockWeek(),
-                    metric: .steps,
-                    chartStyle: appState.preferredChartStyle
-                )
-                .padding(.vertical, 4)
             }
 
             Section {

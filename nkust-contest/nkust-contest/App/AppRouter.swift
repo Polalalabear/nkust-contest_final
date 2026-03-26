@@ -141,11 +141,19 @@ struct AppRouter: View {
     }
 
     private var canStartLiveMonitoring: Bool {
-        appState.userRole == .visuallyImpaired
-            && appState.dataSourceMode == .live
-            && !showMainFlow
-            && didApplyBootstrappedSettings
-            && !isBootstrapping
+        guard appState.dataSourceMode == .live,
+              didApplyBootstrappedSettings,
+              !isBootstrapping else {
+            return false
+        }
+        switch appState.userRole {
+        case .visuallyImpaired:
+            return !showMainFlow
+        case .caregiver:
+            return true
+        case .none:
+            return false
+        }
     }
 
     private var launchOverlay: some View {

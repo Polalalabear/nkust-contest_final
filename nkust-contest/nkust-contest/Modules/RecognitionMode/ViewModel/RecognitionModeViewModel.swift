@@ -54,7 +54,7 @@ final class RecognitionModeViewModel {
 
     func syncStreaming(mode: DataSourceMode, isConnected: Bool, alertDistanceThresholdMeters: Int) {
         currentMode = mode
-        self.alertDistanceThresholdMeters = max(1, alertDistanceThresholdMeters)
+        self.alertDistanceThresholdMeters = min(max(2, alertDistanceThresholdMeters), 15)
         let shouldUseLiveStream = mode == .live && useDeviceCamera && isConnected
         isUsingLiveStream = shouldUseLiveStream
         debugLog("sync streaming mode=\(mode.rawValue) connected=\(isConnected) useDeviceCamera=\(useDeviceCamera) alertDistance=\(self.alertDistanceThresholdMeters)m")

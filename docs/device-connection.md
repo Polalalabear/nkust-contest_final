@@ -2,30 +2,31 @@
 
 ## Connection Type
 
-The device is NOT a client.
+The device operates in **STA (Station) mode**:
 
-It acts as a:
-
-> WiFi Access Point + HTTP MJPEG Stream Server
+> ESP32 connects to the test phone's hotspot as a client, obtaining an IP from DHCP.
 
 ---
 
 ## Network Setup
 
-- SSID: XIAO-S3-CAM
-- Password: password123
-- Device IP: 192.168.4.1
+- **Mode**: STA（連至手機熱點）
+- **Phone Hotspot SSID**: _(手機熱點 SSID)_
+- **ESP32 assigned IP**: `172.20.10.3`（固定或 DHCP 保留）
+- **Stream endpoint**: `http://172.20.10.3/stream`
+
+> ⚠️ 舊 AP 模式資訊（SSID: XIAO-S3-CAM, IP: 192.168.4.1）已廢棄，目前不使用。
 
 ---
 
 ## How iOS Connects
 
-1. User manually connects to WiFi:
-   - XIAO-S3-CAM
+1. iPhone 連至**與 ESP32 相同的手機熱點**網路：
+   - iOS 裝置與 ESP32 共用同一個 hotspot 子網段。
 
 2. App sends HTTP request to:
 
-   http://192.168.4.1/stream
+   http://172.20.10.3/stream
 
 ---
 
@@ -69,14 +70,12 @@ Agent MUST:
 
 ## Development Phase Rule
 
-Current phase:
+Current phase: **realDeviceAllowed**（真機串流已啟用）
 
-- DO NOT connect to real device
-- MUST use MockStreamService
-
-Later phase:
-
-- Replace mock with real MJPEG stream
+- `StreamDevelopmentPhase.current = .realDeviceAllowed`
+- `StreamServiceFactory.makeDefault()` 回傳 `MJPEGStreamService`
+- Live 模式下 app 會嘗試連線 `http://172.20.10.3/stream`
+- Mock 模式仍只走 `MockStreamService`
 
 ---
 
@@ -110,5 +109,5 @@ This is a:
 照護者主控台的 **裝置連線／健康摘要** 可經 **Firestore** 與 **SwiftData** 同步（見 `README.md` 資料契約）。  
 **與本文件的邊界**：
 
-- **ESP32 MJPEG**（`http://192.168.4.1/stream`）仍 **只** 允許由 `StreamService` 以 URLSession 解析；現階段預設 **MockStreamService**。
+- **ESP32 MJPEG**（`http://172.20.10.3/stream`，STA 模式）仍 **只** 允許由 `StreamService` 以 URLSession 解析；現階段 `StreamDevelopmentPhase.current = .realDeviceAllowed`，live 模式使用 `MJPEGStreamService`。
 - **Firestore** 不取代 MJPEG；後端可另寫程序將裝置狀態寫入 Firestore，與 iOS 相機串流解耦。

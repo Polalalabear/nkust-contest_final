@@ -12,7 +12,6 @@ enum StartupTrace {
         let thread = Thread.isMainThread ? "main" : "bg"
         let composed = String(format: "[%@][+%.3fms][%@] %@", category, deltaMs, thread, message)
         print(composed)
-        NSLog("%@", composed)
     }
 }
 
