@@ -19,5 +19,7 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>連接 ESP32 攝影機裝置以提供即時影像串流。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>需要使用目前位置以提供即時定位與附近醫院搜尋功能。</string>
 </dict>
 </plist>

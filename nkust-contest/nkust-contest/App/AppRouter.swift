@@ -58,6 +58,7 @@ struct AppRouter: View {
         .onAppear {
             StartupTrace.log("AppStartup", "AppRouter onAppear")
             PhoneBatteryService.shared.start(appState: appState)
+            VoiceAnnouncementCenter.shared.setAlertInterval(seconds: appState.voiceAlertIntervalSeconds)
             ensureCoordinator()
             syncLiveMonitoring()
         }
@@ -69,6 +70,9 @@ struct AppRouter: View {
         }
         .onChange(of: showMainFlow) { _, _ in
             syncLiveMonitoring()
+        }
+        .onChange(of: appState.voiceAlertIntervalSeconds) { _, seconds in
+            VoiceAnnouncementCenter.shared.setAlertInterval(seconds: seconds)
         }
         .onDisappear {
             pendingMonitorTask?.cancel()

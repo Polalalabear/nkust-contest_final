@@ -16,6 +16,10 @@ final class VoiceAnnouncementCenter {
     private let delegateProxy = VoiceSynthDelegateProxy()
     private var activePriority: VoicePriority?
     private var pendingCompletions: [ObjectIdentifier: CheckedContinuation<Void, Never>] = [:]
+    private var lastSpokenText: String = ""
+    private var lastSpokenPriority: VoicePriority = .navigation
+    private var alertIntervalSeconds: TimeInterval = 2
+    private var lastSpokenAtByPriority: [VoicePriority: Date] = [:]
 
     private init() {
         delegateProxy.onUtteranceFinished = { [weak self] utterance in
@@ -26,8 +30,14 @@ final class VoiceAnnouncementCenter {
         synthesizer.delegate = delegateProxy
     }
 
-    func speak(_ text: String, priority: VoicePriority, interruptLowerPriority: Bool = true) {
+    func speak(
+        _ text: String,
+        priority: VoicePriority,
+        interruptLowerPriority: Bool = true,
+        bypassThrottle: Bool = false
+    ) {
         guard !text.isEmpty else { return }
+        guard bypassThrottle || !isThrottled(priority: priority) else { return }
 
         if !canSpeak(for: priority, interruptLowerPriority: interruptLowerPriority) {
             return
@@ -37,6 +47,9 @@ final class VoiceAnnouncementCenter {
             synthesizer.stopSpeaking(at: .immediate)
         }
 
+        lastSpokenText = text
+        lastSpokenPriority = priority
+        lastSpokenAtByPriority[priority] = Date()
         activePriority = priority
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "zh-TW")
@@ -44,14 +57,23 @@ final class VoiceAnnouncementCenter {
         synthesizer.speak(utterance)
     }
 
-    func speakAndWait(_ text: String, priority: VoicePriority, interruptLowerPriority: Bool = true) async -> Bool {
+    func speakAndWait(
+        _ text: String,
+        priority: VoicePriority,
+        interruptLowerPriority: Bool = true,
+        bypassThrottle: Bool = false
+    ) async -> Bool {
         guard !text.isEmpty else { return false }
+        guard bypassThrottle || !isThrottled(priority: priority) else { return false }
         guard canSpeak(for: priority, interruptLowerPriority: interruptLowerPriority) else { return false }
 
         if synthesizer.isSpeaking, interruptLowerPriority {
             synthesizer.stopSpeaking(at: .immediate)
         }
 
+        lastSpokenText = text
+        lastSpokenPriority = priority
+        lastSpokenAtByPriority[priority] = Date()
         activePriority = priority
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "zh-TW")
@@ -88,6 +110,35 @@ final class VoiceAnnouncementCenter {
     func stopAll() {
         synthesizer.stopSpeaking(at: .immediate)
         activePriority = nil
+    }
+
+    func replayLastSpoken(interruptLowerPriority: Bool = true) {
+        guard !lastSpokenText.isEmpty else { return }
+        speak(
+            lastSpokenText,
+            priority: lastSpokenPriority,
+            interruptLowerPriority: interruptLowerPriority,
+            bypassThrottle: true
+        )
+    }
+
+    func setAlertInterval(seconds: Int) {
+        alertIntervalSeconds = TimeInterval(min(max(1, seconds), 5))
+    }
+
+    func announceVoiceToggle(isEnabled: Bool) {
+        speak(
+            isEnabled ? "語音已開啟" : "語音已關閉",
+            priority: .connectionAlert,
+            interruptLowerPriority: true,
+            bypassThrottle: true
+        )
+    }
+
+    private func isThrottled(priority: VoicePriority) -> Bool {
+        guard priority == .navigation || priority == .connectionAlert else { return false }
+        guard let lastAt = lastSpokenAtByPriority[priority] else { return false }
+        return Date().timeIntervalSince(lastAt) < alertIntervalSeconds
     }
 }
 

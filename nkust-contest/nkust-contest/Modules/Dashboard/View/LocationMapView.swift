@@ -81,6 +81,9 @@ struct LocationMapView: View {
 
         locationAgent.onLocation = { coordinate in
             liveCoordinate = coordinate
+            appState.visUserLatitude = coordinate.latitude
+            appState.visUserLongitude = coordinate.longitude
+            appState.isLocationSharing = true
             position = .region(
                 MKCoordinateRegion(
                     center: coordinate,

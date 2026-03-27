@@ -68,21 +68,41 @@ final class DashboardViewModel {
     }
 
     func showNearestHospital(appState: AppState) {
-        let sourceCoordinate = CLLocationCoordinate2D(
-            latitude: appState.visUserLatitude,
-            longitude: appState.visUserLongitude
-        )
-        let sourceLocation = CLLocation(latitude: sourceCoordinate.latitude, longitude: sourceCoordinate.longitude)
-
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = "醫院"
-        request.region = MKCoordinateRegion(
-            center: sourceCoordinate,
-            latitudinalMeters: 8_000,
-            longitudinalMeters: 8_000
-        )
-
         Task {
+            let sourceCoordinate: CLLocationCoordinate2D
+            do {
+                let latest = try await requestCurrentLocation()
+                sourceCoordinate = latest
+                appState.visUserLatitude = latest.latitude
+                appState.visUserLongitude = latest.longitude
+                appState.isLocationSharing = true
+            } catch OneShotLocationAgent.LocationError.permissionDenied {
+                appState.isLocationSharing = false
+                await SystemIncidentCenter.shared.report(
+                    title: "附近醫院搜尋失敗",
+                    details: "尚未取得定位權限，請先開啟位置存取。",
+                    isCritical: false
+                )
+                return
+            } catch {
+                await SystemIncidentCenter.shared.report(
+                    title: "附近醫院搜尋失敗",
+                    details: "目前無法取得當下定位。",
+                    isCritical: false
+                )
+                return
+            }
+
+            let sourceLocation = CLLocation(latitude: sourceCoordinate.latitude, longitude: sourceCoordinate.longitude)
+
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = "醫院"
+            request.region = MKCoordinateRegion(
+                center: sourceCoordinate,
+                latitudinalMeters: 8_000,
+                longitudinalMeters: 8_000
+            )
+
             do {
                 let response = try await MKLocalSearch(request: request).start()
                 let hospitals = response.mapItems.filter(isHospitalMapItem(_:))
@@ -278,6 +298,7 @@ private final class OneShotLocationAgent: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocationCoordinate2D, Error>?
     private var timeoutTask: Task<Void, Never>?
+    private let recencyThreshold: TimeInterval = 20
 
     override init() {
         super.init()
@@ -291,11 +312,18 @@ private final class OneShotLocationAgent: NSObject, CLLocationManagerDelegate {
             throw LocationError.permissionDenied
         }
 
+        if let cached = manager.location,
+           abs(cached.timestamp.timeIntervalSinceNow) <= recencyThreshold,
+           cached.horizontalAccuracy >= 0 {
+            return cached.coordinate
+        }
+
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             if status == .notDetermined {
                 manager.requestWhenInUseAuthorization()
             } else {
+                manager.startUpdatingLocation()
                 manager.requestLocation()
             }
             timeoutTask = Task { @MainActor [weak self] in
@@ -308,6 +336,7 @@ private final class OneShotLocationAgent: NSObject, CLLocationManagerDelegate {
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
         if status == .authorizedAlways || status == .authorizedWhenInUse {
+            manager.startUpdatingLocation()
             manager.requestLocation()
         } else if status == .denied || status == .restricted {
             finish(with: .failure(LocationError.permissionDenied))
@@ -315,7 +344,10 @@ private final class OneShotLocationAgent: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let latest = locations.last else {
+        let valid = locations
+            .filter { $0.horizontalAccuracy >= 0 && abs($0.timestamp.timeIntervalSinceNow) <= recencyThreshold }
+            .sorted { $0.timestamp > $1.timestamp }
+        guard let latest = valid.first else {
             finish(with: .failure(LocationError.unavailable))
             return
         }
@@ -323,6 +355,10 @@ private final class OneShotLocationAgent: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        if let clError = error as? CLError, clError.code == .locationUnknown {
+            // Transient; wait for the next update until timeout.
+            return
+        }
         finish(with: .failure(LocationError.unavailable))
     }
 

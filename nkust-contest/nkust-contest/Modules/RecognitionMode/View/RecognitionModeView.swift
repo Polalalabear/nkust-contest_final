@@ -81,7 +81,6 @@ struct RecognitionModeView: View {
         }
         .onDisappear {
             viewModel.stopStreaming()
-            VoiceAnnouncementCenter.shared.stopAll()
         }
     }
 

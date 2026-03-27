@@ -6,6 +6,7 @@ struct VoiceToggleButton: View {
     var body: some View {
         Button {
             isEnabled.toggle()
+            VoiceAnnouncementCenter.shared.announceVoiceToggle(isEnabled: isEnabled)
         } label: {
             Image(systemName: isEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
                 .font(.title2)

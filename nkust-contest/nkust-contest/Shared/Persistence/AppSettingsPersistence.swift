@@ -31,6 +31,9 @@ enum AppSettingsPersistence {
         appState.caregiverRelationship = settings.caregiverRelationship
         appState.caregiverEmergencyPhone = settings.caregiverEmergencyPhone
         appState.visUserPhone = settings.visUserPhone ?? "0912-000-000"
+        appState.blackScreenTestEnabled = settings.blackScreenTestEnabled ?? false
+        let persistedVoiceInterval = settings.voiceAlertIntervalSeconds ?? 2
+        appState.voiceAlertIntervalSeconds = min(max(1, persistedVoiceInterval), 5)
         let persistedDistance = settings.modelAlertDistanceMeters ?? 10
         appState.modelAlertDistanceMeters = min(max(2, persistedDistance), 15)
     }
@@ -47,6 +50,8 @@ enum AppSettingsPersistence {
         settings.caregiverRelationship = appState.caregiverRelationship
         settings.caregiverEmergencyPhone = appState.caregiverEmergencyPhone
         settings.visUserPhone = appState.visUserPhone
+        settings.blackScreenTestEnabled = appState.blackScreenTestEnabled
+        settings.voiceAlertIntervalSeconds = appState.voiceAlertIntervalSeconds
         settings.modelAlertDistanceMeters = appState.modelAlertDistanceMeters
         try context.save()
     }

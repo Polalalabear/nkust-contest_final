@@ -172,6 +172,12 @@ struct SummaryView: View {
             .onChange(of: appState.modelAlertDistanceMeters) { _, _ in
                 AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
             }
+            .onChange(of: appState.voiceAlertIntervalSeconds) { _, _ in
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
+            }
+            .onChange(of: appState.blackScreenTestEnabled) { _, _ in
+                AppSettingsPersistence.scheduleSave(from: appState, context: modelContext)
+            }
         }
     }
 
@@ -613,10 +619,30 @@ struct PreferencesView: View {
                 }
             }
 
+            Section("語音報警") {
+                Stepper(value: $state.voiceAlertIntervalSeconds, in: 1...5, step: 1) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("報警間隔時間：\(appState.voiceAlertIntervalSeconds) 秒")
+                        Text("相同等級的警示語音會依此間隔節流，避免持續重複播報。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             Section {
                 Toggle(isOn: $state.showCharts) {
                     Label("在主控台顯示圖表", systemImage: "chart.bar.xaxis")
                 }
+            }
+
+            Section("無障礙測試") {
+                Toggle(isOn: $state.blackScreenTestEnabled) {
+                    Label("黑屏測試（僅視障者模式）", systemImage: "rectangle.fill")
+                }
+                Text("啟用後，進入視障者模式時將覆蓋全黑畫面，離開視障者模式後不受影響。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("語音範例（僅測試資料模式）") {
@@ -637,6 +663,15 @@ struct PreferencesView: View {
                 }
                 Button("範例：SOS") {
                     playSample("緊急求助，已通知照護者", priority: .sos)
+                }
+                Button("範例：切換至行走模式") {
+                    playSample("已切換至行走模式", priority: .navigation)
+                }
+                Button("範例：切換至辨識模式") {
+                    playSample("已切換至辨識模式", priority: .navigation)
+                }
+                Button("範例：切換至長照模式") {
+                    playSample("已切換至長照模式", priority: .navigation)
                 }
             }
             .disabled(appState.dataSourceMode != .mock)

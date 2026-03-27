@@ -62,29 +62,5 @@ struct ModeHeaderBar: View {
                     : "裝置尚未連線，電量 \(appState.deviceBattery) 趴"
             )
         }
-        .onAppear {
-            ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
-                screenID: title,
-                isConnected: appState.effectiveDeviceConnected,
-                voiceEnabled: isVoiceEnabled
-            )
-        }
-        .onChange(of: appState.effectiveDeviceConnected) { _, connected in
-            ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
-                screenID: title,
-                isConnected: connected,
-                voiceEnabled: isVoiceEnabled
-            )
-        }
-        .onChange(of: isVoiceEnabled) { _, voiceEnabled in
-            ConnectionStatusAnnouncer.shared.notifyIfDisconnected(
-                screenID: title,
-                isConnected: appState.effectiveDeviceConnected,
-                voiceEnabled: voiceEnabled
-            )
-        }
-        .onDisappear {
-            ConnectionStatusAnnouncer.shared.stopReminders(screenID: title)
-        }
     }
 }

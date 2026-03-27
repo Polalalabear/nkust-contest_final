@@ -94,7 +94,6 @@ struct WalkModeView: View {
         }
         .onDisappear {
             viewModel.stopStreaming()
-            VoiceAnnouncementCenter.shared.stopAll()
         }
     }
 

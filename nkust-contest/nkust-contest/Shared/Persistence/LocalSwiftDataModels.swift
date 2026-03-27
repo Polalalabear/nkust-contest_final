@@ -17,6 +17,10 @@ final class PersistedAppSettings {
     var caregiverEmergencyPhone: String
     /// 視障者手機號碼（migration-safe: 可為 nil，讀取時回填預設）
     var visUserPhone: String?
+    /// 黑屏測試開關（migration-safe: 可為 nil，讀取時回填 false）
+    var blackScreenTestEnabled: Bool?
+    /// 語音報警間隔（秒）（migration-safe: 可為 nil，讀取時回填 2）
+    var voiceAlertIntervalSeconds: Int?
     /// 新增欄位：為了舊 store migration，允許為 nil，讀取時再套用預設值。
     var modelAlertDistanceMeters: Int?
 
@@ -31,6 +35,8 @@ final class PersistedAppSettings {
         caregiverRelationship: String = "子女",
         caregiverEmergencyPhone: String = "0912-345-678",
         visUserPhone: String? = nil,
+        blackScreenTestEnabled: Bool? = nil,
+        voiceAlertIntervalSeconds: Int? = nil,
         modelAlertDistanceMeters: Int? = 10
     ) {
         self.singletonId = singletonId
@@ -43,6 +49,8 @@ final class PersistedAppSettings {
         self.caregiverRelationship = caregiverRelationship
         self.caregiverEmergencyPhone = caregiverEmergencyPhone
         self.visUserPhone = visUserPhone
+        self.blackScreenTestEnabled = blackScreenTestEnabled
+        self.voiceAlertIntervalSeconds = voiceAlertIntervalSeconds
         self.modelAlertDistanceMeters = modelAlertDistanceMeters
     }
 }

@@ -46,6 +46,10 @@ final class AppState {
     var showCharts: Bool = true
     var preferredChartStyle: ChartStyle = .bar
     var isDarkMode: Bool = false
+    /// 語音報警最小間隔（秒）；用於避免短時間重複播報。
+    var voiceAlertIntervalSeconds: Int = 2
+    /// 測試用：進入視障者主流程時覆蓋全黑畫面（不影響照護者介面）
+    var blackScreenTestEnabled: Bool = false
 
     static let appVersion = "1.4.0"
     static let buildDate = "2026.03.19"

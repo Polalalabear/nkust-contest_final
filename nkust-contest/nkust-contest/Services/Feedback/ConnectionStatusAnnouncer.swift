@@ -11,8 +11,28 @@ final class ConnectionStatusAnnouncer {
     private init() {}
 
     func notifyIfDisconnected(screenID: String, isConnected: Bool, voiceEnabled: Bool) {
+        let previousConnected = screenConnection[screenID]
         screenConnection[screenID] = isConnected
         screenVoiceEnabled[screenID] = voiceEnabled
+
+        if previousConnected == nil, voiceEnabled {
+            VoiceAnnouncementCenter.shared.speak(
+                isConnected ? "裝置已連線" : "裝置目前尚未連線",
+                priority: .connectionAlert,
+                interruptLowerPriority: true,
+                bypassThrottle: true
+            )
+        }
+
+        let switchedToConnected = previousConnected == false && isConnected
+        if switchedToConnected && voiceEnabled {
+            VoiceAnnouncementCenter.shared.speak(
+                "裝置已連線",
+                priority: .connectionAlert,
+                interruptLowerPriority: true,
+                bypassThrottle: true
+            )
+        }
         refreshReminderLoop(for: screenID)
     }
 
